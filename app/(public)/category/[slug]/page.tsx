@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
 import Link from "next/link";
+import { fallbackArticles, fallbackCategories } from "@/lib/fallback-content";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -16,27 +17,43 @@ interface Props {
 const PER_PAGE = 12;
 
 async function getCategory(slug: string) {
-  return prisma.category.findUnique({ where: { slug, isActive: true } });
+  try {
+    const category = await prisma.category.findUnique({ where: { slug, isActive: true } });
+    return category || (fallbackCategories.find((cat) => cat.slug === slug) as any) || null;
+  } catch (error) {
+    console.error("Category data unavailable, rendering fallback category:", error);
+    return (fallbackCategories.find((cat) => cat.slug === slug) as any) || null;
+  }
 }
 
 async function getCategoryArticles(categoryId: string, page: number) {
   const skip = (page - 1) * PER_PAGE;
-  const [articles, total] = await Promise.all([
-    prisma.article.findMany({
-      where: { status: "PUBLISHED", categoryId },
-      orderBy: { publishedAt: "desc" },
-      skip,
-      take: PER_PAGE,
-      include: {
-        author: { select: { id: true, name: true, image: true } },
-        category: { select: { id: true, name: true, slug: true, color: true } },
-        tags: { include: { tag: true } },
-        _count: { select: { comments: true } },
-      },
-    }),
-    prisma.article.count({ where: { status: "PUBLISHED", categoryId } }),
-  ]);
-  return { articles, total, totalPages: Math.ceil(total / PER_PAGE) };
+  try {
+    const [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where: { status: "PUBLISHED", categoryId },
+        orderBy: { publishedAt: "desc" },
+        skip,
+        take: PER_PAGE,
+        include: {
+          author: { select: { id: true, name: true, image: true } },
+          category: { select: { id: true, name: true, slug: true, color: true } },
+          tags: { include: { tag: true } },
+          _count: { select: { comments: true } },
+        },
+      }),
+      prisma.article.count({ where: { status: "PUBLISHED", categoryId } }),
+    ]);
+    if (articles.length) {
+      return { articles, total, totalPages: Math.ceil(total / PER_PAGE) };
+    }
+  } catch (error) {
+    console.error("Category articles unavailable, rendering fallback articles:", error);
+  }
+
+  const category = fallbackCategories.find((cat) => cat.id === categoryId || cat.slug === categoryId);
+  const articles = fallbackArticles.filter((item) => !category || item.category.slug === category.slug);
+  return { articles, total: articles.length, totalPages: Math.ceil(articles.length / PER_PAGE) };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -54,7 +71,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const page = parseInt((await searchParams)?.page || "1");
   const category = await getCategory(slug);
   if (!category) notFound();
-  const { articles, total, totalPages } = await getCategoryArticles(category.id, page);
+  const { articles, total, totalPages } = await getCategoryArticles(category.id || category.slug, page);
 
   return (
     <div className="min-h-screen bg-gray-50">

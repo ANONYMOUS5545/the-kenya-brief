@@ -9,6 +9,7 @@ import ArticleCard from "@/components/article/ArticleCard";
 import CommentSection from "@/components/article/CommentSection";
 import ShareButtons from "@/components/article/ShareButtons";
 import VocalizeButton from "@/components/article/VocalizeButton";
+import { fallbackArticles } from "@/lib/fallback-content";
 import Link from "next/link";
 import Image from "next/image";
 import { Clock, Eye, Calendar, User, Tag, ChevronRight } from "lucide-react";
@@ -19,29 +20,45 @@ interface Props {
 }
 
 async function getArticle(slug: string) {
-  return prisma.article.findUnique({
-    where: { slug, status: "PUBLISHED" },
-    include: {
-      author: { select: { id: true, name: true, image: true, bio: true } },
-      category: { select: { id: true, name: true, slug: true, color: true } },
-      tags: { include: { tag: true } },
-      _count: { select: { comments: true } },
-    },
-  });
+  try {
+    const article = await prisma.article.findUnique({
+      where: { slug, status: "PUBLISHED" },
+      include: {
+        author: { select: { id: true, name: true, image: true, bio: true } },
+        category: { select: { id: true, name: true, slug: true, color: true } },
+        tags: { include: { tag: true } },
+        _count: { select: { comments: true } },
+      },
+    });
+    return article || fallbackArticles.find((item) => item.slug === slug) || null;
+  } catch (error) {
+    console.error("Article data unavailable, rendering fallback article:", error);
+    return fallbackArticles.find((item) => item.slug === slug) || null;
+  }
 }
 
 async function getRelated(categoryId: string, currentId: string) {
-  return prisma.article.findMany({
-    where: { status: "PUBLISHED", categoryId, id: { not: currentId } },
-    orderBy: { publishedAt: "desc" },
-    take: 4,
-    include: {
-      author: { select: { id: true, name: true, image: true } },
-      category: { select: { id: true, name: true, slug: true, color: true } },
-      tags: { include: { tag: true } },
-      _count: { select: { comments: true } },
-    },
-  });
+  try {
+    const articles = await prisma.article.findMany({
+      where: { status: "PUBLISHED", categoryId, id: { not: currentId } },
+      orderBy: { publishedAt: "desc" },
+      take: 4,
+      include: {
+        author: { select: { id: true, name: true, image: true } },
+        category: { select: { id: true, name: true, slug: true, color: true } },
+        tags: { include: { tag: true } },
+        _count: { select: { comments: true } },
+      },
+    });
+    if (articles.length) return articles;
+  } catch (error) {
+    console.error("Related article data unavailable, rendering fallback related stories:", error);
+  }
+
+  const current = fallbackArticles.find((item) => item.id === currentId);
+  return fallbackArticles
+    .filter((item) => item.id !== currentId && (!current || item.category.slug === current.category.slug))
+    .slice(0, 4);
 }
 
 function getPlainText(html: string) {

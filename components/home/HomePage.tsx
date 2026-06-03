@@ -3,63 +3,73 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
 import NewsletterForm from "@/components/ui/NewsletterForm";
+import { getFallbackHomeData } from "@/lib/fallback-content";
 import Link from "next/link";
 import { TrendingUp, Flame, ChevronRight, Play } from "lucide-react";
 
 async function getHomeData() {
-  const [featured, trending, breaking, latestByCategory, categories] = await Promise.all([
-    prisma.article.findMany({
-      where: { status: "PUBLISHED", isFeatured: true },
-      orderBy: { publishedAt: "desc" },
-      take: 5,
-      include: {
-        author: { select: { id: true, name: true, image: true } },
-        category: { select: { id: true, name: true, slug: true, color: true } },
-        tags: { include: { tag: true } },
-        _count: { select: { comments: true } },
-      },
-    }),
-    prisma.article.findMany({
-      where: { status: "PUBLISHED", isTrending: true },
-      orderBy: { viewCount: "desc" },
-      take: 6,
-      include: {
-        author: { select: { id: true, name: true, image: true } },
-        category: { select: { id: true, name: true, slug: true, color: true } },
-        tags: { include: { tag: true } },
-        _count: { select: { comments: true } },
-      },
-    }),
-    prisma.article.findMany({
-      where: { status: "PUBLISHED", isBreaking: true },
-      orderBy: { publishedAt: "desc" },
-      take: 3,
-      include: {
-        author: { select: { id: true, name: true, image: true } },
-        category: { select: { id: true, name: true, slug: true, color: true } },
-        tags: { include: { tag: true } },
-        _count: { select: { comments: true } },
-      },
-    }),
-    prisma.article.findMany({
-      where: { status: "PUBLISHED" },
-      orderBy: { publishedAt: "desc" },
-      take: 12,
-      include: {
-        author: { select: { id: true, name: true, image: true } },
-        category: { select: { id: true, name: true, slug: true, color: true } },
-        tags: { include: { tag: true } },
-        _count: { select: { comments: true } },
-      },
-    }),
-    prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      include: { _count: { select: { articles: { where: { status: "PUBLISHED" } } } } },
-    }),
-  ]);
+  try {
+    const [featured, trending, breaking, latestByCategory, categories] = await Promise.all([
+      prisma.article.findMany({
+        where: { status: "PUBLISHED", isFeatured: true },
+        orderBy: { publishedAt: "desc" },
+        take: 5,
+        include: {
+          author: { select: { id: true, name: true, image: true } },
+          category: { select: { id: true, name: true, slug: true, color: true } },
+          tags: { include: { tag: true } },
+          _count: { select: { comments: true } },
+        },
+      }),
+      prisma.article.findMany({
+        where: { status: "PUBLISHED", isTrending: true },
+        orderBy: { viewCount: "desc" },
+        take: 6,
+        include: {
+          author: { select: { id: true, name: true, image: true } },
+          category: { select: { id: true, name: true, slug: true, color: true } },
+          tags: { include: { tag: true } },
+          _count: { select: { comments: true } },
+        },
+      }),
+      prisma.article.findMany({
+        where: { status: "PUBLISHED", isBreaking: true },
+        orderBy: { publishedAt: "desc" },
+        take: 3,
+        include: {
+          author: { select: { id: true, name: true, image: true } },
+          category: { select: { id: true, name: true, slug: true, color: true } },
+          tags: { include: { tag: true } },
+          _count: { select: { comments: true } },
+        },
+      }),
+      prisma.article.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: { publishedAt: "desc" },
+        take: 12,
+        include: {
+          author: { select: { id: true, name: true, image: true } },
+          category: { select: { id: true, name: true, slug: true, color: true } },
+          tags: { include: { tag: true } },
+          _count: { select: { comments: true } },
+        },
+      }),
+      prisma.category.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+        include: { _count: { select: { articles: { where: { status: "PUBLISHED" } } } } },
+      }),
+    ]);
 
-  return { featured, trending, breaking, latestByCategory, categories };
+    if (!latestByCategory.length || !categories.length) {
+      return getFallbackHomeData();
+    }
+
+    return { featured, trending, breaking, latestByCategory, categories };
+  } catch (error) {
+    console.error("Homepage data unavailable, rendering fallback content:", error);
+    return getFallbackHomeData();
+  }
 }
 
 export default async function HomePage() {

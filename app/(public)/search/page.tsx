@@ -6,6 +6,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
 import SearchBar from "@/components/ui/SearchBar";
+import { fallbackArticles, fallbackCategories } from "@/lib/fallback-content";
 
 interface Props {
   searchParams: Promise<{ q?: string; page?: string; category?: string }>;
@@ -34,20 +35,47 @@ export default async function SearchPage({ searchParams }: Props) {
   }
   if (category) where.category = { slug: category };
 
-  const [articles, total, categories] = await Promise.all([
-    q ? prisma.article.findMany({
-      where, skip, take: PER_PAGE,
-      orderBy: { publishedAt: "desc" },
-      include: {
-        author: { select: { id: true, name: true, image: true } },
-        category: { select: { id: true, name: true, slug: true, color: true } },
-        tags: { include: { tag: true } },
-        _count: { select: { comments: true } },
-      },
-    }) : [],
-    q ? prisma.article.count({ where }) : Promise.resolve(0),
-    prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
-  ]);
+  let articles: any[] = [];
+  let total = 0;
+  let categories: any[] = [];
+
+  try {
+    [articles, total, categories] = await Promise.all([
+      q ? prisma.article.findMany({
+        where, skip, take: PER_PAGE,
+        orderBy: { publishedAt: "desc" },
+        include: {
+          author: { select: { id: true, name: true, image: true } },
+          category: { select: { id: true, name: true, slug: true, color: true } },
+          tags: { include: { tag: true } },
+          _count: { select: { comments: true } },
+        },
+      }) : [],
+      q ? prisma.article.count({ where }) : Promise.resolve(0),
+      prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+    ]);
+    if (!categories.length || (q && !articles.length)) {
+      categories = fallbackCategories;
+      articles = q
+        ? fallbackArticles.filter((item) => {
+            const haystack = `${item.title} ${item.excerpt || ""} ${item.category.name}`.toLowerCase();
+            return haystack.includes(q.toLowerCase()) && (!category || item.category.slug === category);
+          })
+        : [];
+      total = articles.length;
+    }
+  } catch (error) {
+    console.error("Search data unavailable, rendering fallback search:", error);
+    const normalized = q.toLowerCase();
+    categories = fallbackCategories;
+    articles = q
+      ? fallbackArticles.filter((item) => {
+          const haystack = `${item.title} ${item.excerpt || ""} ${item.category.name}`.toLowerCase();
+          return haystack.includes(normalized) && (!category || item.category.slug === category);
+        })
+      : [];
+    total = articles.length;
+  }
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
