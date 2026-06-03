@@ -176,6 +176,7 @@ export default async function AdminDashboard() {
             { href: "/admin/comments?status=PENDING", label: "Moderate Comments", color: "bg-blue-600 text-white hover:bg-blue-700" },
             { href: "/admin/categories", label: "Categories", color: "bg-green-600 text-white hover:bg-green-700" },
             { href: "/admin/analytics", label: "View Analytics", color: "bg-gray-700 text-white hover:bg-gray-800" },
+            { href: "/admin/news-automation", label: "News Automation", color: "bg-red-700 text-white hover:bg-red-800" },
           ].map(({ href, label, color }) => (
             <Link key={href} href={href}
               className={`px-4 py-2 rounded-lg text-sm font-semibold font-sans transition-colors ${color}`}>

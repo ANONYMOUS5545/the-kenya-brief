@@ -33,7 +33,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
       return NextResponse.json({ success: false, error: "Article not found" }, { status: 404 });
     }
     await prisma.article.update({ where: { id }, data: { viewCount: { increment: 1 } } });
-    return NextResponse.json({ success: true, data: article });
+    const session = await getServerSession(authOptions);
+    const isEditor = session?.user && ["ADMIN", "SENIOR_EDITOR", "JUNIOR_EDITOR"].includes((session.user as { role?: string }).role || "");
+    const data = isEditor ? article : (() => {
+      const { sourceName, sourceUrl, sourceAuthor, sourcePublishedAt, ...safeArticle } = article;
+      return safeArticle;
+    })();
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("GET /api/articles/[id] error:", error);
     return NextResponse.json({ success: false, error: "Failed to fetch article" }, { status: 500 });

@@ -1,0 +1,10 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="675" fill="#F3F4F6"/>
+  <rect x="96" y="96" width="1008" height="483" rx="18" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="4"/>
+  <rect x="156" y="162" width="240" height="30" rx="6" fill="#C8102E"/>
+  <rect x="156" y="242" width="720" height="34" rx="6" fill="#111827"/>
+  <rect x="156" y="308" width="888" height="22" rx="6" fill="#6B7280"/>
+  <rect x="156" y="354" width="798" height="22" rx="6" fill="#9CA3AF"/>
+  <rect x="156" y="448" width="300" height="34" rx="6" fill="#C8102E"/>
+  <text x="600" y="540" text-anchor="middle" fill="#111827" font-family="Georgia, serif" font-size="54" font-weight="700">The Kenya Brief</text>
+</svg>

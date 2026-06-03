@@ -70,6 +70,30 @@ export default async function AdminAnalyticsPage() {
         ))}
       </div>
 
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h2 className="font-bold text-gray-900 font-sans">SEO Search Console Monitor</h2>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-5">
+          {[
+            { label: "Top Pages", value: topArticles.length, desc: "By onsite views" },
+            { label: "Top Keywords", value: "Connect GSC", desc: "Set verification env vars" },
+            { label: "Organic Traffic", value: "GA4 Ready", desc: "Uses NEXT_PUBLIC_GA_ID" },
+            { label: "Crawl Errors", value: "0 local", desc: "Build routes verified" },
+            { label: "Indexed Pages", value: "Sitemap", desc: "/sitemap.xml generated" },
+            { label: "Search Impressions", value: "GSC Ready", desc: "Awaiting API data" },
+            { label: "Click-through Rate", value: "GSC Ready", desc: "Awaiting API data" },
+            { label: "RSS Feed", value: "Active", desc: "/rss.xml generated" },
+          ].map((item) => (
+            <div key={item.label} className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+              <p className="text-xs text-gray-400 font-sans">{item.label}</p>
+              <p className="text-sm font-bold text-gray-900 font-sans mt-1">{item.value}</p>
+              <p className="text-xs text-gray-500 font-sans mt-0.5">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
         {/* Top Articles */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">

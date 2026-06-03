@@ -2,6 +2,7 @@
 /* eslint-disable */
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 
 const prisma = new PrismaClient();
 
@@ -32,29 +33,29 @@ async function main() {
     console.log(`✅ Category: ${cat.name}`);
   }
 
-  const adminPassword = await bcrypt.hash("Admin@1234", 12);
+  const adminPassword = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD || crypto.randomBytes(18).toString("base64url"), 12);
   const admin = await prisma.user.upsert({
     where: { email: "admin@kenyabrief.co.ke" },
     update: {},
     create: { name: "Admin User", email: "admin@kenyabrief.co.ke", password: adminPassword, role: "ADMIN", bio: "Platform administrator" },
   });
-  console.log("✅ Admin: admin@kenyabrief.co.ke / Admin@1234");
+  console.log("✅ Admin user ready");
 
-  const seniorPassword = await bcrypt.hash("Editor@1234", 12);
+  const seniorPassword = await bcrypt.hash(process.env.SEED_SENIOR_EDITOR_PASSWORD || crypto.randomBytes(18).toString("base64url"), 12);
   const seniorEditor = await prisma.user.upsert({
     where: { email: "senior@kenyabrief.co.ke" },
     update: {},
     create: { name: "Jane Wanjiku", email: "senior@kenyabrief.co.ke", password: seniorPassword, role: "SENIOR_EDITOR", bio: "Senior Editor, Politics & Business" },
   });
-  console.log("✅ Senior Editor: senior@kenyabrief.co.ke / Editor@1234");
+  console.log("✅ Senior editor user ready");
 
-  const juniorPassword = await bcrypt.hash("Junior@1234", 12);
+  const juniorPassword = await bcrypt.hash(process.env.SEED_JUNIOR_EDITOR_PASSWORD || crypto.randomBytes(18).toString("base64url"), 12);
   const juniorEditor = await prisma.user.upsert({
     where: { email: "junior@kenyabrief.co.ke" },
     update: {},
     create: { name: "Brian Omondi", email: "junior@kenyabrief.co.ke", password: juniorPassword, role: "JUNIOR_EDITOR", bio: "Junior Editor, Sports & Entertainment" },
   });
-  console.log("✅ Junior Editor: junior@kenyabrief.co.ke / Junior@1234");
+  console.log("✅ Junior editor user ready");
 
   const tagsData = ["Kenya","Nairobi","Government","Economy","Elections","Football","Athletics","Ruto","Parliament","Business","Technology","Health","Education","Climate","Africa"];
   const tags = {};
@@ -205,10 +206,7 @@ async function main() {
   }
 
   console.log("\n🎉 Database seeded successfully!");
-  console.log("\n📋 Login Credentials:");
-  console.log("   Admin:         admin@kenyabrief.co.ke  /  Admin@1234");
-  console.log("   Senior Editor: senior@kenyabrief.co.ke /  Editor@1234");
-  console.log("   Junior Editor: junior@kenyabrief.co.ke /  Junior@1234");
+  console.log("\n📋 Seed users created. Passwords are not printed for security.");
 }
 
 main()

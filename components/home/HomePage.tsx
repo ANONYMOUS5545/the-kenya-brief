@@ -3,6 +3,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
 import NewsletterForm from "@/components/ui/NewsletterForm";
+import NewsRefreshOnOpen from "@/components/news/NewsRefreshOnOpen";
 import { getFallbackHomeData } from "@/lib/fallback-content";
 import Link from "next/link";
 import { TrendingUp, Flame, ChevronRight, Play } from "lucide-react";
@@ -83,6 +84,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <NewsRefreshOnOpen />
       <Header />
 
       <main>

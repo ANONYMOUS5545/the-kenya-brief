@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, FileText, Users, FolderOpen, MessageSquare,
-  BarChart3, Settings, LogOut, ExternalLink, ChevronLeft, Menu, X
+  BarChart3, Settings, LogOut, ExternalLink, ChevronLeft, Menu, X, RefreshCw
 } from "lucide-react";
 import { useState } from "react";
 
@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/categories", icon: FolderOpen, label: "Categories" },
   { href: "/admin/comments", icon: MessageSquare, label: "Comments" },
   { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/admin/news-automation", icon: RefreshCw, label: "News Automation" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 

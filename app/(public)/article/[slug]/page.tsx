@@ -82,13 +82,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: article.metaTitle || article.title,
     description: article.metaDescription || article.excerpt || "",
+    alternates: { canonical: `/article/${article.slug}` },
     openGraph: {
       title: article.title,
       description: article.excerpt || "",
+      url: `/article/${article.slug}`,
       images: article.featuredImage ? [{ url: article.featuredImage }] : [],
       type: "article",
       publishedTime: article.publishedAt?.toISOString(),
+      modifiedTime: article.updatedAt?.toISOString(),
       authors: [PUBLIC_NEWS_AUTHOR_NAME],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.excerpt || "",
+      images: article.featuredImage ? [article.featuredImage] : [],
     },
   };
 }
@@ -102,6 +111,22 @@ export default async function ArticlePage({ params }: Props) {
   const catColor = article.category?.color || "#C8102E";
   const appUrl = getSiteUrl();
   const articleUrl = `${appUrl}/article/${article.slug}`;
+  const newsArticleSchema = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: article.title,
+    description: article.excerpt || article.metaDescription || "",
+    image: article.featuredImage ? [article.featuredImage.startsWith("http") ? article.featuredImage : `${appUrl}${article.featuredImage}`] : [],
+    datePublished: (article.publishedAt || article.createdAt).toISOString(),
+    dateModified: article.updatedAt.toISOString(),
+    author: { "@type": "Organization", name: PUBLIC_NEWS_AUTHOR_NAME },
+    publisher: {
+      "@type": "Organization",
+      name: "The Kenya Brief",
+      logo: { "@type": "ImageObject", url: `${appUrl}/og-image.svg` },
+    },
+    mainEntityOfPage: articleUrl,
+  };
   const vocalizeText = [article.title, article.excerpt, getPlainText(article.content)]
     .filter(Boolean)
     .join(". ");
@@ -113,6 +138,10 @@ export default async function ArticlePage({ params }: Props) {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleSchema) }}
+        />
         {/* Breadcrumb */}
         <div className="bg-white border-b border-gray-200">
           <div className="container mx-auto px-4 py-2">
@@ -191,14 +220,21 @@ export default async function ArticlePage({ params }: Props) {
 
                 {/* Featured Image */}
                 {article.featuredImage && (
-                  <div className="relative aspect-video bg-gray-100">
-                    <Image
-                      src={article.featuredImage}
-                      alt={article.featuredImageAlt || article.title}
-                      fill
-                      className="object-cover"
-                      priority
-                    />
+                  <div>
+                    <div className="relative aspect-video bg-gray-100">
+                      <Image
+                        src={article.featuredImage}
+                        alt={article.featuredImageAlt || article.title}
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                    </div>
+                    {(article.imageCaption || article.imageCredit) && (
+                      <p className="px-6 py-2 text-xs text-gray-500 font-sans bg-gray-50 border-b border-gray-100">
+                        {article.imageCaption}
+                      </p>
+                    )}
                   </div>
                 )}
 

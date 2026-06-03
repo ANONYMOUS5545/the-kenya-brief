@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface UserData {
@@ -20,7 +20,6 @@ export default function AdminEditUserForm({ user }: { user: UserData }) {
     isSuspended: user.isSuspended,
     password: "",
   });
-  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -84,13 +83,9 @@ export default function AdminEditUserForm({ user }: { user: UserData }) {
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5 font-sans">New Password <span className="text-gray-400 font-normal">(leave blank to keep current)</span></label>
           <div className="relative">
-            <input type={showPw ? "text" : "password"} name="password" value={form.password}
+            <input type="password" name="password" value={form.password}
               onChange={handleChange} minLength={8} placeholder="••••••••"
               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-sans focus:outline-none focus:border-red-500 pr-10" />
-            <button type="button" onClick={() => setShowPw(!showPw)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
           </div>
         </div>
 

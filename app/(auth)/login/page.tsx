@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Newspaper } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [callbackUrl, setCallbackUrl] = useState("/");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -78,20 +76,13 @@ export default function LoginPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5 font-sans">Password</label>
               <div className="relative">
                 <input
-                  type={showPw ? "text" : "password"}
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-sans focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 pr-10"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
             </div>
 
@@ -110,16 +101,6 @@ export default function LoginPage() {
               </Link>
             </p>
           </form>
-        </div>
-
-        {/* Demo credentials */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs font-sans text-blue-800">
-          <p className="font-bold mb-2">Demo Credentials:</p>
-          <div className="space-y-1">
-            <p>Admin: admin@kenyabrief.co.ke / Admin@1234</p>
-            <p>Senior Editor: senior@kenyabrief.co.ke / Editor@1234</p>
-            <p>Junior Editor: junior@kenyabrief.co.ke / Junior@1234</p>
-          </div>
         </div>
       </div>
     </div>

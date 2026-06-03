@@ -2,13 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AdminNewUserPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "JUNIOR_EDITOR", bio: "" });
-  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -82,13 +81,9 @@ export default function AdminNewUserPage() {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5 font-sans">Password *</label>
             <div className="relative">
-              <input type={showPw ? "text" : "password"} name="password" value={form.password}
+              <input type="password" name="password" value={form.password}
                 onChange={handleChange} required minLength={8} placeholder="Min. 8 characters"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-sans focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 pr-10" />
-              <button type="button" onClick={() => setShowPw(!showPw)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
           </div>
 

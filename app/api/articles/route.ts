@@ -58,8 +58,10 @@ export async function GET(request: NextRequest) {
       prisma.article.count({ where }),
     ]);
 
+    const data = isEditor ? articles : articles.map(({ sourceName, sourceUrl, sourceAuthor, sourcePublishedAt, ...article }) => article);
+
     return NextResponse.json({
-      success: true, data: articles, total, page, limit,
+      success: true, data, total, page, limit,
       totalPages: Math.ceil(total / limit),
     });
   } catch (error) {

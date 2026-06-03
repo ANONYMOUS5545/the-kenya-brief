@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, Phone, MapPin, Share2, ExternalLink, Rss } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
 import NewsletterForm from "@/components/ui/NewsletterForm";
 
 const footerLinks = {
@@ -12,18 +12,18 @@ const footerLinks = {
     { name: "Health", href: "/category/health" },
   ],
   Company: [
-    { name: "About Us", href: "#" },
-    { name: "Our Team", href: "#" },
-    { name: "Careers", href: "#" },
-    { name: "Advertise", href: "#" },
-    { name: "Contact Us", href: "#" },
+    { name: "About Us", href: "/about-us" },
+    { name: "Our Team", href: "/our-team" },
+    { name: "Careers", href: "/careers" },
+    { name: "Advertise", href: "/advertise" },
+    { name: "Contact Us", href: "/contact-us" },
   ],
   Legal: [
-    { name: "Privacy Policy", href: "#" },
-    { name: "Terms of Use", href: "#" },
-    { name: "Cookie Policy", href: "#" },
-    { name: "Editorial Policy", href: "#" },
-    { name: "Corrections", href: "#" },
+    { name: "Privacy Policy", href: "/privacy-policy" },
+    { name: "Terms of Use", href: "/terms-of-use" },
+    { name: "Cookie Policy", href: "/cookie-policy" },
+    { name: "Editorial Policy", href: "/editorial-policy" },
+    { name: "Corrections", href: "/corrections-policy" },
   ],
 };
 

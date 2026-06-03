@@ -38,7 +38,7 @@ function article(
     slug,
     excerpt,
     content: `<p>${excerpt}</p>`,
-    featuredImage: "/og-image.svg",
+    featuredImage: "/news-fallback.svg",
     featuredImageAlt: title,
     videoUrl: null,
     status: "PUBLISHED",

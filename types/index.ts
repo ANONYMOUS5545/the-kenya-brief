@@ -24,7 +24,14 @@ export interface ArticleWithRelations {
   content: string;
   featuredImage?: string | null;
   featuredImageAlt?: string | null;
+  imageCaption?: string | null;
+  imageCredit?: string | null;
   videoUrl?: string | null;
+  sourceName?: string | null;
+  sourceUrl?: string | null;
+  sourceAuthor?: string | null;
+  sourcePublishedAt?: Date | null;
+  isAutomated?: boolean;
   status: ArticleStatus;
   isFeatured: boolean;
   isTrending: boolean;
