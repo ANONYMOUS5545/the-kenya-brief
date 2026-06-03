@@ -3,6 +3,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/news/sync",
+      "schedule": "*/4 * * * *"
+    }
+  ],
   "env": {
     "PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING": "1"
   },

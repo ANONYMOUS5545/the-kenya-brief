@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Clock, Eye, MessageCircle, Calendar } from "lucide-react";
-import { timeAgo, formatDate } from "@/lib/utils";
+import { Clock, Eye, MessageCircle } from "lucide-react";
+import { timeAgo } from "@/lib/utils";
 import type { ArticleWithRelations } from "@/types";
+import { PUBLIC_NEWS_AUTHOR_NAME } from "@/lib/news-automation";
 
 interface ArticleCardProps {
   article: ArticleWithRelations;
@@ -71,7 +72,7 @@ export default function ArticleCard({
           )}
           {showMeta && (
             <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 font-sans">
-              <span>{article.author?.name}</span>
+              <span>{PUBLIC_NEWS_AUTHOR_NAME}</span>
               <span>•</span>
               <span>{timeAgo(article.publishedAt || article.createdAt)}</span>
               {article.readTime && <span>• {article.readTime} min read</span>}
@@ -107,7 +108,7 @@ export default function ArticleCard({
               {article.title}
             </h2>
             <div className="flex items-center gap-3 mt-2 text-gray-300 text-xs font-sans">
-              <span>{article.author?.name}</span>
+              <span>{PUBLIC_NEWS_AUTHOR_NAME}</span>
               <span>•</span>
               <span>{timeAgo(article.publishedAt || article.createdAt)}</span>
             </div>
@@ -153,7 +154,7 @@ export default function ArticleCard({
           )}
           {showMeta && (
             <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 font-sans">
-              <span className="font-medium text-gray-700">{article.author?.name}</span>
+              <span className="font-medium text-gray-700">{PUBLIC_NEWS_AUTHOR_NAME}</span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Clock size={11} /> {timeAgo(article.publishedAt || article.createdAt)}
@@ -210,7 +211,7 @@ export default function ArticleCard({
         {showMeta && (
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center gap-2 text-xs text-gray-500 font-sans">
-              <span className="font-medium text-gray-700">{article.author?.name}</span>
+              <span className="font-medium text-gray-700">{PUBLIC_NEWS_AUTHOR_NAME}</span>
               <span>•</span>
               <span>{timeAgo(article.publishedAt || article.createdAt)}</span>
             </div>

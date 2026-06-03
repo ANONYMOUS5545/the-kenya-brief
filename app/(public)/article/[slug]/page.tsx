@@ -10,10 +10,13 @@ import CommentSection from "@/components/article/CommentSection";
 import ShareButtons from "@/components/article/ShareButtons";
 import VocalizeButton from "@/components/article/VocalizeButton";
 import { fallbackArticles } from "@/lib/fallback-content";
+import type { ArticleWithRelations } from "@/types";
 import Link from "next/link";
 import Image from "next/image";
-import { Clock, Eye, Calendar, User, Tag, ChevronRight } from "lucide-react";
-import { formatDate, timeAgo } from "@/lib/utils";
+import { Clock, Eye, Calendar, Tag, ChevronRight } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import { PUBLIC_NEWS_AUTHOR_NAME } from "@/lib/news-automation";
+import { getSiteUrl } from "@/lib/site-url";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -85,7 +88,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: article.featuredImage ? [{ url: article.featuredImage }] : [],
       type: "article",
       publishedTime: article.publishedAt?.toISOString(),
-      authors: [article.author.name],
+      authors: [PUBLIC_NEWS_AUTHOR_NAME],
     },
   };
 }
@@ -97,7 +100,7 @@ export default async function ArticlePage({ params }: Props) {
 
   const related = await getRelated(article.categoryId, article.id);
   const catColor = article.category?.color || "#C8102E";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getSiteUrl();
   const articleUrl = `${appUrl}/article/${article.slug}`;
   const vocalizeText = [article.title, article.excerpt, getPlainText(article.content)]
     .filter(Boolean)
@@ -160,10 +163,10 @@ export default async function ArticlePage({ params }: Props) {
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 font-sans">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <span className="text-red-700 font-bold text-xs">{article.author.name[0]}</span>
+                        <span className="text-red-700 font-bold text-xs">{PUBLIC_NEWS_AUTHOR_NAME[0]}</span>
                       </div>
                       <div>
-                        <span className="font-semibold text-gray-800">{article.author.name}</span>
+                        <span className="font-semibold text-gray-800">{PUBLIC_NEWS_AUTHOR_NAME}</span>
                         <span className="text-xs text-gray-400 block">Staff Reporter</span>
                       </div>
                     </div>
@@ -238,13 +241,13 @@ export default async function ArticlePage({ params }: Props) {
                   {/* Author Bio */}
                   <div className="mt-8 p-5 bg-gray-50 rounded-xl flex gap-4">
                     <div className="w-14 h-14 bg-red-700 rounded-full flex items-center justify-center shrink-0">
-                      <span className="text-white text-xl font-bold">{article.author.name[0]}</span>
+                      <span className="text-white text-xl font-bold">{PUBLIC_NEWS_AUTHOR_NAME[0]}</span>
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900 font-sans">{article.author.name}</p>
+                      <p className="font-bold text-gray-900 font-sans">{PUBLIC_NEWS_AUTHOR_NAME}</p>
                       <p className="text-xs text-red-700 font-sans mb-1">Staff Reporter, The Kenya Brief</p>
                       <p className="text-sm text-gray-600 font-sans">
-                        {(article.author as any).bio || "Journalist covering the latest developments across Kenya and the broader East Africa region."}
+                        Kenya Brief reports and organizes the latest developments across Kenya and the broader East Africa region.
                       </p>
                     </div>
                   </div>
@@ -272,7 +275,7 @@ export default async function ArticlePage({ params }: Props) {
                 <div className="flex flex-col gap-4">
                   {related.length > 0 ? (
                     related.map((a) => (
-                      <ArticleCard key={a.id} article={a as any} variant="compact" />
+                      <ArticleCard key={a.id} article={a as ArticleWithRelations} variant="compact" />
                     ))
                   ) : (
                     <p className="text-sm text-gray-500 font-sans">No related articles yet.</p>

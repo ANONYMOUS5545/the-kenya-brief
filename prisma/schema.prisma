@@ -129,7 +129,14 @@ model Article {
   content         String        @db.Text
   featuredImage   String?
   featuredImageAlt String?
+  imageCaption    String?
+  imageCredit     String?
   videoUrl        String?
+  sourceName      String?
+  sourceUrl       String?       @unique
+  sourceAuthor    String?
+  sourcePublishedAt DateTime?
+  isAutomated     Boolean       @default(false)
   status          ArticleStatus @default(DRAFT)
   isFeatured      Boolean       @default(false)
   isTrending      Boolean       @default(false)
@@ -154,6 +161,7 @@ model Article {
   @@index([status, publishedAt])
   @@index([categoryId])
   @@index([authorId])
+  @@index([isAutomated])
   @@map("articles")
 }
 
