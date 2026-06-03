@@ -6,7 +6,7 @@
   "crons": [
     {
       "path": "/api/news/sync",
-      "schedule": "*/4 * * * *"
+      "schedule": "0 0 * * *"
     }
   ],
   "env": {
