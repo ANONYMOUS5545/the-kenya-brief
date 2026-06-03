@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -6,13 +8,14 @@ import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
 import CommentSection from "@/components/article/CommentSection";
 import ShareButtons from "@/components/article/ShareButtons";
+import VocalizeButton from "@/components/article/VocalizeButton";
 import Link from "next/link";
 import Image from "next/image";
 import { Clock, Eye, Calendar, User, Tag, ChevronRight } from "lucide-react";
 import { formatDate, timeAgo } from "@/lib/utils";
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 async function getArticle(slug: string) {
@@ -39,6 +42,17 @@ async function getRelated(categoryId: string, currentId: string) {
       _count: { select: { comments: true } },
     },
   });
+}
+
+function getPlainText(html: string) {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -68,6 +82,9 @@ export default async function ArticlePage({ params }: Props) {
   const catColor = article.category?.color || "#C8102E";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const articleUrl = `${appUrl}/article/${article.slug}`;
+  const vocalizeText = [article.title, article.excerpt, getPlainText(article.content)]
+    .filter(Boolean)
+    .join(". ");
 
   // Increment view (fire and forget)
   prisma.article.update({ where: { id: article.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
@@ -146,8 +163,9 @@ export default async function ArticlePage({ params }: Props) {
                   </div>
 
                   {/* Share */}
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <ShareButtons title={article.title} url={articleUrl} />
+                    <VocalizeButton text={vocalizeText} />
                   </div>
                 </div>
 

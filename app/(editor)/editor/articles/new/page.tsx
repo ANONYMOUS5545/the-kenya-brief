@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import ArticleEditor from "@/components/admin/ArticleEditor";
 import { getServerSession } from "next-auth";

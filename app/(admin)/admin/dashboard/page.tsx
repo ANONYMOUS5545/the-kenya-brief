@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { FileText, Users, MessageSquare, Eye, TrendingUp, Clock, CheckCircle, AlertCircle, BarChart3 } from "lucide-react";

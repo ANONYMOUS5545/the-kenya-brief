@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plus, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, FileText } from "lucide-react";
@@ -5,7 +7,7 @@ import { timeAgo } from "@/lib/utils";
 import AdminArticleActions from "@/components/admin/AdminArticleActions";
 
 interface Props {
-  searchParams: { status?: string; page?: string; search?: string };
+  searchParams: Promise<{ status?: string; page?: string; search?: string }>;
 }
 
 const PER_PAGE = 15;

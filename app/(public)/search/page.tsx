@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import Header from "@/components/layout/Header";
@@ -6,7 +8,7 @@ import ArticleCard from "@/components/article/ArticleCard";
 import SearchBar from "@/components/ui/SearchBar";
 
 interface Props {
-  searchParams: { q?: string; page?: string; category?: string };
+  searchParams: Promise<{ q?: string; page?: string; category?: string }>;
 }
 
 const PER_PAGE = 12;

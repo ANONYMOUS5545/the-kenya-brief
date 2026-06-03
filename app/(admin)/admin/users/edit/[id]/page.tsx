@@ -1,10 +1,12 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import AdminEditUserForm from "@/components/admin/AdminEditUserForm";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-interface Props { params: { id: string } }
+interface Props { params: Promise<{ id: string }> }
 
 export default async function AdminEditUserPage({ params }: Props) {
   const { id } = await params;

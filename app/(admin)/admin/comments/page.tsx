@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
@@ -5,7 +7,7 @@ import { timeAgo } from "@/lib/utils";
 import AdminCommentActions from "@/components/admin/AdminCommentActions";
 
 interface Props {
-  searchParams: { status?: string };
+  searchParams: Promise<{ status?: string }>;
 }
 
 export default async function AdminCommentsPage({ searchParams }: Props) {

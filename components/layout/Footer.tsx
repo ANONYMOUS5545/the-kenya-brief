@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mail, Phone, MapPin, Share2, ExternalLink, Rss } from "lucide-react";
+import NewsletterForm from "@/components/ui/NewsletterForm";
 
 const footerLinks = {
   News: [
@@ -45,7 +46,7 @@ export default function Footer() {
           <p className="text-red-100 mb-6 font-sans text-sm">
             Get the latest Kenya news delivered directly to your inbox every morning.
           </p>
-          <NewsletterForm />
+          <NewsletterForm variant="footer" />
         </div>
       </div>
 
@@ -122,42 +123,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  );
-}
-
-function NewsletterForm() {
-  return (
-    <form
-      className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-      action="/api/newsletter"
-      method="POST"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const email = (form.elements.namedItem("email") as HTMLInputElement)?.value;
-        if (!email) return;
-        try {
-          const res = await fetch("/api/newsletter", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-          });
-          const data = await res.json();
-          alert(data.success ? "Thank you for subscribing!" : (data.error || "Failed to subscribe"));
-          if (data.success) form.reset();
-        } catch {
-          alert("An error occurred. Please try again.");
-        }
-      }}
-    >
-      <input
-        type="email" name="email" required placeholder="Enter your email address"
-        className="flex-1 px-4 py-2.5 rounded-md text-gray-900 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-white"
-      />
-      <button type="submit"
-        className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-md hover:bg-gray-800 transition-colors font-sans whitespace-nowrap">
-        Subscribe Free
-      </button>
-    </form>
   );
 }

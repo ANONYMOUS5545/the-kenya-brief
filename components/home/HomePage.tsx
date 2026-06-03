@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
+import NewsletterForm from "@/components/ui/NewsletterForm";
 import Link from "next/link";
 import { TrendingUp, Flame, ChevronRight, Play } from "lucide-react";
 
@@ -111,17 +112,8 @@ export default async function HomePage() {
                 <Link
                   key={cat.id}
                   href={`/category/${cat.slug}`}
-                  className="shrink-0 px-4 py-1.5 text-xs font-bold rounded-full font-sans uppercase tracking-wide text-gray-600 hover:text-white transition-colors border border-gray-200 hover:border-transparent"
+                  className="shrink-0 px-4 py-1.5 text-xs font-bold rounded-full font-sans uppercase tracking-wide text-gray-600 hover:text-white transition-colors border border-gray-200 hover:bg-[var(--cat-color)] hover:border-[var(--cat-color)]"
                   style={{ ["--cat-color" as any]: cat.color || "#C8102E" }}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLElement).style.backgroundColor = cat.color || "#C8102E";
-                    (e.target as HTMLElement).style.borderColor = cat.color || "#C8102E";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLElement).style.backgroundColor = "";
-                    (e.target as HTMLElement).style.borderColor = "";
-                    (e.target as HTMLElement).style.color = "";
-                  }}
                 >
                   {cat.name}
                   <span className="ml-1 opacity-60 font-normal">({cat._count.articles})</span>
@@ -272,22 +264,7 @@ export default async function HomePage() {
               <div className="bg-red-700 rounded-xl p-5 text-white">
                 <h3 className="text-lg font-bold mb-2" style={{ fontFamily: "Georgia, serif" }}>Daily Briefing</h3>
                 <p className="text-red-100 text-sm font-sans mb-4">Get top Kenya stories delivered each morning.</p>
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const form = e.target as HTMLFormElement;
-                    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-                    const res = await fetch("/api/newsletter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
-                    const d = await res.json();
-                    alert(d.message || d.error);
-                    if (d.success) form.reset();
-                  }}
-                >
-                  <input type="email" name="email" required placeholder="Your email" className="w-full px-3 py-2 rounded-lg text-gray-900 text-sm font-sans mb-2 focus:outline-none" />
-                  <button type="submit" className="w-full py-2 bg-gray-900 text-white text-sm font-bold rounded-lg hover:bg-gray-800 transition-colors font-sans">
-                    Subscribe Free
-                  </button>
-                </form>
+                <NewsletterForm variant="sidebar" />
               </div>
             </aside>
           </div>
