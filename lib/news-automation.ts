@@ -1,5 +1,5 @@
-export const NEWS_AUTOMATION_UPDATE_INTERVAL_MINUTES = 4;
-export const NEWS_AUTOMATION_CRON_SCHEDULE = "*/4 * * * *";
+export const NEWS_AUTOMATION_UPDATE_INTERVAL_MINUTES = 1440;
+export const NEWS_AUTOMATION_CRON_SCHEDULE = "0 0 * * *";
 export const PUBLIC_NEWS_AUTHOR_NAME = "Kenya Brief";
 export const NEWS_AUTOMATION_AUTHOR_EMAIL = "automation@kenyabrief.co.ke";
 
