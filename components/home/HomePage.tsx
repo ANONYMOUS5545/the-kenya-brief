@@ -5,12 +5,13 @@ import ArticleCard from "@/components/article/ArticleCard";
 import NewsletterForm from "@/components/ui/NewsletterForm";
 import NewsRefreshOnOpen from "@/components/news/NewsRefreshOnOpen";
 import { getFallbackHomeData } from "@/lib/fallback-content";
+import { getLiveFallbackHomeData } from "@/lib/live-fallback-content";
+import { runNewsIngestion } from "@/lib/news-ingestion";
 import Link from "next/link";
-import { TrendingUp, Flame, ChevronRight, Play } from "lucide-react";
+import { TrendingUp, Flame, ChevronRight } from "lucide-react";
 
-async function getHomeData() {
-  try {
-    const [featured, trending, breaking, latestByCategory, categories] = await Promise.all([
+async function queryHomeData() {
+  const [featured, trending, breaking, latestByCategory, categories] = await Promise.all([
       prisma.article.findMany({
         where: { status: "PUBLISHED", isFeatured: true },
         orderBy: { publishedAt: "desc" },
@@ -62,14 +63,39 @@ async function getHomeData() {
       }),
     ]);
 
-    if (!latestByCategory.length || !categories.length) {
-      return getFallbackHomeData();
+  return { featured, trending, breaking, latestByCategory, categories };
+}
+
+async function isNewsAutomationEnabled() {
+  const setting = await prisma.siteSettings.findUnique({
+    where: { key: "news_automation_enabled" },
+    select: { value: true },
+  });
+
+  return setting?.value !== "false";
+}
+
+async function getHomeData() {
+  try {
+    let data = await queryHomeData();
+
+    if ((!data.latestByCategory.length || !data.categories.length) && await isNewsAutomationEnabled()) {
+      try {
+        await runNewsIngestion();
+        data = await queryHomeData();
+      } catch (error) {
+        console.error("Initial homepage news ingestion failed, rendering fallback content:", error);
+      }
     }
 
-    return { featured, trending, breaking, latestByCategory, categories };
+    if (!data.latestByCategory.length || !data.categories.length) {
+      return await getLiveFallbackHomeData().catch(() => getFallbackHomeData());
+    }
+
+    return data;
   } catch (error) {
     console.error("Homepage data unavailable, rendering fallback content:", error);
-    return getFallbackHomeData();
+    return await getLiveFallbackHomeData().catch(() => getFallbackHomeData());
   }
 }
 
@@ -78,7 +104,6 @@ export default async function HomePage() {
 
   const [heroArticle, ...otherFeatured] = featured.length ? featured : latestByCategory.slice(0, 5);
   const secondaryFeatured = otherFeatured.slice(0, 2);
-  const sidebarFeatured = otherFeatured.slice(2, 5);
   const mainArticles = latestByCategory.slice(0, 8);
   const sidebarArticles = latestByCategory.slice(8, 12);
 

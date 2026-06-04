@@ -10,6 +10,7 @@ import CommentSection from "@/components/article/CommentSection";
 import ShareButtons from "@/components/article/ShareButtons";
 import VocalizeButton from "@/components/article/VocalizeButton";
 import { fallbackArticles } from "@/lib/fallback-content";
+import { getLiveFallbackArticle, getLiveFallbackHomeData } from "@/lib/live-fallback-content";
 import type { ArticleWithRelations } from "@/types";
 import Link from "next/link";
 import Image from "next/image";
@@ -24,6 +25,7 @@ interface Props {
 
 async function getArticle(slug: string) {
   try {
+    const liveArticle = await getLiveFallbackArticle(slug);
     const article = await prisma.article.findUnique({
       where: { slug, status: "PUBLISHED" },
       include: {
@@ -33,10 +35,16 @@ async function getArticle(slug: string) {
         _count: { select: { comments: true } },
       },
     });
-    return article || fallbackArticles.find((item) => item.slug === slug) || null;
+    if (article) return article;
+    if (liveArticle) return liveArticle;
+    const live = await getLiveFallbackHomeData().catch(() => null);
+    return live?.latestByCategory[0] || fallbackArticles.find((item) => item.slug === slug) || null;
   } catch (error) {
     console.error("Article data unavailable, rendering fallback article:", error);
-    return fallbackArticles.find((item) => item.slug === slug) || null;
+    const liveArticle = await getLiveFallbackArticle(slug).catch(() => null);
+    if (liveArticle) return liveArticle;
+    const live = await getLiveFallbackHomeData().catch(() => null);
+    return live?.latestByCategory[0] || fallbackArticles.find((item) => item.slug === slug) || null;
   }
 }
 
@@ -56,6 +64,11 @@ async function getRelated(categoryId: string, currentId: string) {
     if (articles.length) return articles;
   } catch (error) {
     console.error("Related article data unavailable, rendering fallback related stories:", error);
+  }
+
+  const live = await getLiveFallbackHomeData().catch(() => null);
+  if (live?.latestByCategory.length) {
+    return live.latestByCategory.filter((item) => item.id !== currentId).slice(0, 4);
   }
 
   const current = fallbackArticles.find((item) => item.id === currentId);
