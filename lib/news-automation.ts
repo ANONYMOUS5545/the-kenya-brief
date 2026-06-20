@@ -52,6 +52,14 @@ export interface FetchedNewsItem {
 
 function decodeHtmlEntities(text: string) {
   return text
+    .replace(/&\s*#\s*x([0-9a-f]+);?/gi, (_, hex) => {
+      const code = Number.parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&\s*#?\s*(\d{2,7});?/g, (_, decimal) => {
+      const code = Number.parseInt(decimal, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
@@ -73,7 +81,7 @@ export function cleanNewsText(text: string) {
 }
 
 export function hasCorruptNewsText(text?: string | null) {
-  return JUNK_TEXT_PATTERN.test(text || "");
+  return JUNK_TEXT_PATTERN.test(text || "") || /&\s*#?\s*\d{2,7};?/i.test(text || "");
 }
 
 function cleanTitleText(text: string) {
