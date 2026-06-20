@@ -8,6 +8,7 @@ import {
   createKenyaBriefArticleContent,
   createKenyaBriefSummary,
   createKenyaBriefTitle,
+  hasCorruptNewsText,
   hasFullArticleContext,
   hasUsableNewsText,
   sanitizeExistingArticleHtml,
@@ -20,6 +21,11 @@ const FEED_TIMEOUT_MS = 5000;
 const MAX_ITEMS_PER_SOURCE = 30;
 const MAX_IMPORTS_PER_RUN = 180;
 const MAX_ARTICLE_PAGE_FETCHES_PER_SOURCE = 18;
+const CURATED_AUTOMATED_SLUGS = new Set([
+  "the-polygamist-netflix-trending-kenya",
+  "top-50-influential-kenyans-2026",
+  "best-smes-in-kenya-nairobi-2026",
+]);
 
 const CATEGORY_META: Record<string, { color: string; icon: string }> = {
   "Breaking News": { color: "#C8102E", icon: "B" },
@@ -229,6 +235,7 @@ function rankingParagraphs(title: string, intro: string, sections: string[]) {
   return [
     `<p>${intro}</p>`,
     ...sections.map((section) => `<p>${section}</p>`),
+    "<blockquote>Reference pool: Kenyans.co.ke public profiles and news pages are reviewed alongside Google Trends Kenya, Google News Kenya, official company pages, public filings, credible publisher reports, and verified public records.</blockquote>",
     `<p>This annual listing is reviewed for search interest, public relevance, visibility, and reader usefulness. It is designed as a living editorial guide rather than a paid placement.</p>`,
   ].join("");
 }
@@ -369,7 +376,7 @@ async function ensureAnnualRankingArticles(authorId: string) {
 async function repairExistingAutomatedArticles() {
   const articles = await prisma.article.findMany({
     where: { isAutomated: true, status: "PUBLISHED" },
-    select: { id: true, content: true },
+    select: { id: true, slug: true, title: true, excerpt: true, content: true, featuredImage: true },
     take: 500,
   });
   let cleaned = 0;
@@ -377,18 +384,23 @@ async function repairExistingAutomatedArticles() {
 
   for (const article of articles) {
     const repairedContent = sanitizeExistingArticleHtml(article.content);
+    const hasReferencedImage = Boolean(article.featuredImage && article.featuredImage !== FALLBACK_IMAGE);
+    const hasCleanTitle = hasUsableNewsText(article.title, 8) && !hasCorruptNewsText(article.title);
+    const hasCleanExcerpt = !article.excerpt || (hasUsableNewsText(article.excerpt, 30) && !hasCorruptNewsText(article.excerpt));
 
-    if (!repairedContent) {
+    if ((!repairedContent || !hasReferencedImage || !hasCleanTitle || !hasCleanExcerpt) && !CURATED_AUTOMATED_SLUGS.has(article.slug)) {
       await prisma.article.update({
         where: { id: article.id },
         data: {
           status: "ARCHIVED",
-          rejectionReason: "Archived automatically because the imported article did not contain enough clean publisher context.",
+          rejectionReason: "Archived automatically because the imported article had corrupted text, insufficient clean publisher context, or no referenced publisher image.",
         },
       });
       archived += 1;
       continue;
     }
+
+    if (!repairedContent) continue;
 
     if (repairedContent !== article.content) {
       await prisma.article.update({

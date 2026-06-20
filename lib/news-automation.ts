@@ -36,9 +36,9 @@ const SEARCH_TITLE_PREFIXES = [
   "Father's Day",
 ];
 
-const JUNK_TEXT_PATTERN = /[#@$%^*_={}\[\]\\|<>]{2,}|(?:&[#a-z0-9]+;){2,}|[\uFFFD]{1,}/i;
+const JUNK_TEXT_PATTERN = /[#@$%^*_={}\[\]\\|<>]{2,}|[#@$%^*_={}\[\]\\|<>]\s*[#@$%^*_={}\[\]\\|<>]|(?:&[#a-z0-9]+;){2,}|[\uFFFD]{1,}/i;
 const UNPROFESSIONAL_TEXT_PATTERN = /\b(top stories today|receive breaking stories|directly on your device|available publisher details|concise brief|fuller verified reporting|read the original|read more|also read|related stories|subscribe|sign in|newsletter|advertisement|cookie policy|all rights reserved|click here)\b/i;
-const MIN_FULL_CONTEXT_PARAGRAPHS = 3;
+const MIN_FULL_CONTEXT_PARAGRAPHS = 4;
 const MIN_FULL_CONTEXT_CHARS = 450;
 
 export interface FetchedNewsItem {
@@ -70,6 +70,10 @@ export function cleanNewsText(text: string) {
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function hasCorruptNewsText(text?: string | null) {
+  return JUNK_TEXT_PATTERN.test(text || "");
 }
 
 function cleanTitleText(text: string) {
@@ -151,7 +155,8 @@ export function sanitizeArticleParagraphs(text?: string | null) {
     });
 }
 
-export function hasFullArticleContext(item: Pick<FetchedNewsItem, "bodyText" | "summary">) {
+export function hasFullArticleContext(item: Pick<FetchedNewsItem, "bodyText" | "summary" | "imageUrl">) {
+  if (!item.imageUrl) return false;
   const paragraphs = sanitizeArticleParagraphs(item.bodyText);
   const charCount = paragraphs.join(" ").length;
   return paragraphs.length >= MIN_FULL_CONTEXT_PARAGRAPHS && charCount >= MIN_FULL_CONTEXT_CHARS;

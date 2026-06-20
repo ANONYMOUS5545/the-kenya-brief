@@ -30,14 +30,20 @@ function article(
   slug: string,
   categorySlug: string,
   excerpt: string,
-  flags: Partial<Pick<ArticleWithRelations, "isFeatured" | "isTrending" | "isBreaking" | "viewCount">> = {}
+  flags: Partial<Pick<ArticleWithRelations, "isFeatured" | "isTrending" | "isBreaking" | "viewCount">> = {},
+  content?: string
 ): ArticleWithRelations {
   return {
     id,
     title,
     slug,
     excerpt,
-    content: `<p>${excerpt}</p>`,
+    content: content || [
+      `<p>${excerpt}</p>`,
+      "<p>The story is presented as part of The Kenya Brief's curated coverage for readers following major developments across Kenya and the region.</p>",
+      "<p>Editors group this article by topic so readers can follow related coverage, background and future updates in the same section.</p>",
+      "<p>Further verified details can be added as reporting develops and credible source material becomes available.</p>",
+    ].join(""),
     featuredImage: "/news-fallback.svg",
     featuredImageAlt: title,
     videoUrl: null,
@@ -113,7 +119,13 @@ export const fallbackArticles: ArticleWithRelations[] = [
     "the-polygamist-netflix-trending-kenya",
     "entertainment",
     "The Polygamist is drawing Kenyan search interest as viewers debate the Netflix drama's story of love, betrayal, family secrets and power.",
-    { isTrending: true, viewCount: 3360 }
+    { isTrending: true, viewCount: 3360 },
+    [
+      "<p>The Polygamist is trending in Kenya as viewers search for details about the South African Netflix drama and its story of love, betrayal, family secrets and power.</p>",
+      "<p>The drama follows a wealthy businessman whose private relationships begin to collide with his public image, creating tension around marriage, trust and the consequences of hidden choices.</p>",
+      "<p>The show belongs in Entertainment because the strongest reader interest is around streaming culture, Netflix rankings, cast conversation, viewer reaction and African television storytelling.</p>",
+      "<p>Kenyan search interest around The Polygamist points to a wider appetite for African dramas that mix domestic conflict with questions about reputation, ambition and accountability.</p>",
+    ].join("")
   ),
   article(
     "fallback-7",
@@ -137,7 +149,14 @@ export const fallbackArticles: ArticleWithRelations[] = [
     "top-50-influential-kenyans-2026",
     "entertainment",
     "An annual ranking of influential Kenyans shaping politics, business, technology, sport, culture, public service and civic life.",
-    { isTrending: true, viewCount: 4520 }
+    { isTrending: true, viewCount: 4520 },
+    [
+      "<p>The Top 50 Influential Kenyans 2026 listing highlights public figures, entrepreneurs, athletes, creators and civic voices shaping national conversation.</p>",
+      "<p>The ranking is designed for readers searching for influential Kenyans, famous Kenyans, Kenyan leaders, Kenyan entrepreneurs and people shaping Kenya in 2026.</p>",
+      "<p>Selection signals include public visibility, verified achievements, institutional influence, cultural impact, business relevance and contribution to civic life.</p>",
+      "<blockquote>Reference pool: Kenyans.co.ke public profiles and news pages are reviewed alongside Google Trends Kenya, Google News Kenya, official company pages, credible publisher reports and verified public records.</blockquote>",
+      "<p>The list should be reviewed and updated through the year as new achievements, leadership changes and public-interest developments emerge.</p>",
+    ].join("")
   ),
   article(
     "fallback-best-smes",
@@ -145,7 +164,14 @@ export const fallbackArticles: ArticleWithRelations[] = [
     "best-smes-in-kenya-nairobi-2026",
     "business",
     "An annual guide to standout SMEs in Kenya and Nairobi, covering small businesses, startups, local brands and fast-growing founders.",
-    { isTrending: true, viewCount: 3940 }
+    { isTrending: true, viewCount: 3940 },
+    [
+      "<p>The Best SMEs in Kenya and Nairobi 2026 guide is built for readers looking for strong small businesses, startups, local brands and service providers.</p>",
+      "<p>The listing covers businesses across retail, food, logistics, professional services, manufacturing, creative work, technology, agribusiness and neighborhood services.</p>",
+      "<p>Selection signals include customer relevance, local visibility, innovation, founder credibility, employment contribution, consistency and public reputation.</p>",
+      "<blockquote>Reference pool: Kenyans.co.ke business and people coverage is reviewed alongside Google Trends Kenya, Google News Kenya, company websites, county business records, founder pages and credible publisher reports.</blockquote>",
+      "<p>Editors can update the guide with verified nominees, city-specific sections and category rankings as more reliable business data becomes available.</p>",
+    ].join("")
   ),
 ];
 

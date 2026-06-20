@@ -13,7 +13,7 @@ export default function AdminSettingsForm({ initialSettings }: Props) {
     site_tagline: initialSettings.site_tagline || "Truth. Clarity. Impact.",
     site_description: initialSettings.site_description || "Kenya's trusted source for breaking news.",
     contact_email: initialSettings.contact_email || "news@kenyabrief.co.ke",
-    contact_phone: initialSettings.contact_phone || "+254 700 000 000",
+    contact_phone: initialSettings.contact_phone || "+254792579974",
     twitter_url: initialSettings.twitter_url || "https://twitter.com/KenyaBrief",
     facebook_url: initialSettings.facebook_url || "https://facebook.com/KenyaBrief",
     instagram_url: initialSettings.instagram_url || "",
