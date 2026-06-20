@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Search, Menu, X, ChevronDown, User, LogOut,
-  Settings, Edit3, LayoutDashboard, Bell
+  Edit3, LayoutDashboard
 } from "lucide-react";
 
 const NAV_CATEGORIES = [
@@ -13,9 +13,12 @@ const NAV_CATEGORIES = [
   { name: "Business", slug: "business" },
   { name: "Sports", slug: "sports" },
   { name: "Entertainment", slug: "entertainment" },
-  { name: "Lifestyle", slug: "lifestyle" },
   { name: "Technology", slug: "technology" },
   { name: "Health", slug: "health" },
+  { name: "Education", slug: "education" },
+  { name: "Environment", slug: "environment" },
+  { name: "Counties", slug: "counties" },
+  { name: "Lifestyle", slug: "lifestyle" },
   { name: "World", slug: "world" },
 ];
 
@@ -27,6 +30,7 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
+  const [headlines, setHeadlines] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +38,24 @@ export default function Header() {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadHeadlines = () => {
+      fetch("/api/news/headlines", { cache: "no-store" })
+        .then((response) => response.json())
+        .then((data) => {
+          if (!cancelled && Array.isArray(data?.headlines)) setHeadlines(data.headlines);
+        })
+        .catch(() => {});
+    };
+    const timeout = window.setTimeout(loadHeadlines, 1500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -72,11 +94,9 @@ export default function Header() {
           </span>
           <div className="overflow-hidden flex-1">
             <div className="animate-marquee whitespace-nowrap font-sans">
-              Kenya's Economy Grows 5.8% in Q2 2026 &nbsp;•&nbsp;
-              Harambee Stars Qualify for AFCON 2027 &nbsp;•&nbsp;
-              Digital Economy Bill Passed by Parliament &nbsp;•&nbsp;
-              Mount Kenya Glaciers Warning Issued &nbsp;•&nbsp;
-              Universal Health Coverage Launches July 1 &nbsp;•&nbsp;
+              {(headlines.length ? headlines : ["Breaking news and top Kenya stories"]).map((headline) => (
+                <span key={headline}>{headline} &nbsp;-&nbsp; </span>
+              ))}
             </div>
           </div>
         </div>
@@ -301,3 +321,4 @@ export default function Header() {
     </>
   );
 }
+

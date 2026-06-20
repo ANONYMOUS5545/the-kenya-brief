@@ -1,7 +1,8 @@
 import type { ArticleWithRelations, CategoryWithCount } from "@/types";
 import { estimateReadTime, slugify } from "@/lib/utils";
-import { classifyNewsCategory, createKenyaBriefSummary, createKenyaBriefTitle } from "@/lib/news-automation";
-import { fetchLatestNewsItems, type FeedItem } from "@/lib/news-ingestion";
+import { classifyNewsCategory, createKenyaBriefArticleContent, createKenyaBriefSummary, createKenyaBriefTitle } from "@/lib/news-automation";
+import { readNewsCache } from "@/lib/news-cache";
+import type { FeedItem } from "@/lib/news-ingestion";
 
 const author = { id: "live-news-author", name: "Kenya Brief", image: null };
 const categoryColors: Record<string, string> = {
@@ -15,7 +16,39 @@ const categoryColors: Record<string, string> = {
   Education: "#7C3AED",
   Environment: "#15803D",
   Counties: "#EA580C",
+  Lifestyle: "#DB2777",
+  World: "#4B5563",
 };
+const defaultCategoryNames = [
+  "Breaking News",
+  "Politics",
+  "Business",
+  "Technology",
+  "Sports",
+  "Entertainment",
+  "Health",
+  "Education",
+  "Environment",
+  "Counties",
+  "Lifestyle",
+  "World",
+];
+const homeCategoryOrder = [
+  "Breaking News",
+  "Politics",
+  "Business",
+  "Counties",
+  "Health",
+  "Education",
+  "Environment",
+  "Technology",
+  "Sports",
+  "Entertainment",
+  "Lifestyle",
+  "World",
+];
+let homeDataCache: { data: Awaited<ReturnType<typeof buildLiveFallbackHomeData>>; loadedAt: number } | null = null;
+const HOME_DATA_TTL_MS = 60_000;
 
 function categoryFor(item: FeedItem) {
   const name = classifyNewsCategory(item);
@@ -31,7 +64,7 @@ export function liveArticleFromFeedItem(item: FeedItem, index = 0): ArticleWithR
   const title = createKenyaBriefTitle(item.title);
   const summary = createKenyaBriefSummary(item);
   const category = categoryFor(item);
-  const content = `<p>${summary}</p><p>This story was rewritten by The Kenya Brief from information first reported by ${item.sourceName}.</p>`;
+  const content = createKenyaBriefArticleContent(item);
 
   return {
     id: `live-${slugify(item.link || title)}`,
@@ -41,7 +74,7 @@ export function liveArticleFromFeedItem(item: FeedItem, index = 0): ArticleWithR
     content,
     featuredImage: item.imageUrl || null,
     featuredImageAlt: title,
-    imageCaption: item.imageCaption || (item.imageUrl ? `Image referenced from ${item.sourceName}.` : null),
+    imageCaption: item.imageCaption || (item.imageUrl ? `Photo: ${item.sourceName}.` : null),
     imageCredit: item.imageUrl ? item.sourceName : null,
     sourceName: item.sourceName,
     sourceUrl: item.link,
@@ -65,23 +98,68 @@ export function liveArticleFromFeedItem(item: FeedItem, index = 0): ArticleWithR
   };
 }
 
-export async function getLiveFallbackHomeData() {
-  const { items } = await fetchLatestNewsItems(120);
-  const articles = items.map(liveArticleFromFeedItem);
-  const counts = new Map<string, number>();
+function balanceArticlesForHome(articles: ArticleWithRelations[]) {
+  const buckets = new Map<string, ArticleWithRelations[]>();
+  articles.forEach((article) => {
+    const slug = article.category.slug;
+    buckets.set(slug, [...(buckets.get(slug) || []), article]);
+  });
+
+  const ordered: ArticleWithRelations[] = [];
+  const seen = new Set<string>();
+  const categorySlugs = homeCategoryOrder.map(slugify);
+
+  while (ordered.length < articles.length) {
+    let added = false;
+
+    for (const slug of categorySlugs) {
+      const next = buckets.get(slug)?.shift();
+      if (next && !seen.has(next.id)) {
+        ordered.push(next);
+        seen.add(next.id);
+        added = true;
+      }
+    }
+
+    if (!added) break;
+  }
 
   articles.forEach((article) => {
+    if (!seen.has(article.id)) ordered.push(article);
+  });
+
+  return ordered.map((article, index) => ({
+    ...article,
+    isFeatured: index < 5,
+    isTrending: index >= 5 && index < 12,
+    isBreaking: article.category.name === "Breaking News" || index < 3,
+  }));
+}
+
+async function buildLiveFallbackHomeData() {
+  const items = (await readNewsCache()).slice(0, 180);
+  const allArticles = items.map(liveArticleFromFeedItem);
+  const articles = balanceArticlesForHome(allArticles);
+  const counts = new Map<string, number>();
+
+  allArticles.forEach((article) => {
     counts.set(article.category.slug, (counts.get(article.category.slug) || 0) + 1);
   });
 
-  const categories: CategoryWithCount[] = Array.from(counts.entries()).map(([slug, count], index) => {
-    const article = articles.find((item) => item.category.slug === slug);
+  defaultCategoryNames.forEach((name) => {
+    const slug = slugify(name);
+    if (!counts.has(slug)) counts.set(slug, 0);
+  });
+
+  const categories: CategoryWithCount[] = Array.from(counts.entries()).map(([slug, count]) => {
+    const article = allArticles.find((item) => item.category.slug === slug);
+    const name = article?.category.name || defaultCategoryNames.find((item) => slugify(item) === slug) || slug;
     return {
       id: article?.category.id || `live-${slug}`,
-      name: article?.category.name || slug,
+      name,
       slug,
-      color: article?.category.color || "#C8102E",
-      icon: article?.category.name?.[0] || "N",
+      color: article?.category.color || categoryColors[name] || "#C8102E",
+      icon: name[0] || "N",
       _count: { articles: count },
     };
   }).sort((a, b) => a.name.localeCompare(b.name));
@@ -95,7 +173,16 @@ export async function getLiveFallbackHomeData() {
   };
 }
 
+export async function getLiveFallbackHomeData() {
+  if (homeDataCache && Date.now() - homeDataCache.loadedAt < HOME_DATA_TTL_MS) {
+    return homeDataCache.data;
+  }
+
+  const data = await buildLiveFallbackHomeData();
+  homeDataCache = { data, loadedAt: Date.now() };
+  return data;
+}
+
 export async function getLiveFallbackArticle(slug: string) {
-  const { items } = await fetchLatestNewsItems(160);
-  return items.map(liveArticleFromFeedItem).find((item) => item.slug === slug) || null;
+  return (await readNewsCache()).map(liveArticleFromFeedItem).find((item) => item.slug === slug) || null;
 }

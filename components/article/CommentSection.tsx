@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { MessageCircle, Send, ThumbsUp, Flag } from "lucide-react";
 import toast from "react-hot-toast";
@@ -25,13 +25,35 @@ export default function CommentSection({ articleId }: { articleId: string }) {
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [hasEnteredView, setHasEnteredView] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const target = sectionRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasEnteredView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!hasEnteredView) return;
+
     fetch(`/api/comments?articleId=${articleId}`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setComments(d.data); })
       .finally(() => setLoading(false));
-  }, [articleId]);
+  }, [articleId, hasEnteredView]);
 
   const handleSubmit = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
@@ -66,7 +88,7 @@ export default function CommentSection({ articleId }: { articleId: string }) {
   const authorInitial = (c: Comment) => authorName(c)[0]?.toUpperCase();
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div ref={sectionRef} className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: "Georgia, serif" }}>
           <MessageCircle size={20} className="text-red-700" />

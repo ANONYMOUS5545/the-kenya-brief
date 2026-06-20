@@ -6,7 +6,6 @@ import NewsletterForm from "@/components/ui/NewsletterForm";
 import NewsRefreshOnOpen from "@/components/news/NewsRefreshOnOpen";
 import { getFallbackHomeData } from "@/lib/fallback-content";
 import { getLiveFallbackHomeData } from "@/lib/live-fallback-content";
-import { runNewsIngestion } from "@/lib/news-ingestion";
 import Link from "next/link";
 import { TrendingUp, Flame, ChevronRight } from "lucide-react";
 
@@ -66,27 +65,12 @@ async function queryHomeData() {
   return { featured, trending, breaking, latestByCategory, categories };
 }
 
-async function isNewsAutomationEnabled() {
-  const setting = await prisma.siteSettings.findUnique({
-    where: { key: "news_automation_enabled" },
-    select: { value: true },
-  });
-
-  return setting?.value !== "false";
-}
-
 async function getHomeData() {
   try {
-    let data = await queryHomeData();
+    const liveData = await getLiveFallbackHomeData().catch(() => null);
+    if (liveData?.latestByCategory.length) return liveData;
 
-    if ((!data.latestByCategory.length || !data.categories.length) && await isNewsAutomationEnabled()) {
-      try {
-        await runNewsIngestion();
-        data = await queryHomeData();
-      } catch (error) {
-        console.error("Initial homepage news ingestion failed, rendering fallback content:", error);
-      }
-    }
+    const data = await queryHomeData();
 
     if (!data.latestByCategory.length || !data.categories.length) {
       return await getLiveFallbackHomeData().catch(() => getFallbackHomeData());
@@ -153,7 +137,6 @@ export default async function HomePage() {
                   style={{ ["--cat-color" as any]: cat.color || "#C8102E" }}
                 >
                   {cat.name}
-                  <span className="ml-1 opacity-60 font-normal">({cat._count.articles})</span>
                 </Link>
               ))}
             </div>
@@ -279,7 +262,7 @@ export default async function HomePage() {
                       className="px-3 py-1.5 text-xs font-semibold rounded-full font-sans border-2 text-white"
                       style={{ backgroundColor: cat.color || "#C8102E", borderColor: cat.color || "#C8102E" }}
                     >
-                      {cat.icon} {cat.name} ({cat._count.articles})
+                      {cat.icon} {cat.name}
                     </Link>
                   ))}
                 </div>

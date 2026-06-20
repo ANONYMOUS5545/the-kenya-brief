@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -23,9 +24,8 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-async function getArticle(slug: string) {
+const getArticle = cache(async (slug: string) => {
   try {
-    const liveArticle = await getLiveFallbackArticle(slug);
     const article = await prisma.article.findUnique({
       where: { slug, status: "PUBLISHED" },
       include: {
@@ -36,6 +36,7 @@ async function getArticle(slug: string) {
       },
     });
     if (article) return article;
+    const liveArticle = await getLiveFallbackArticle(slug).catch(() => null);
     if (liveArticle) return liveArticle;
     const live = await getLiveFallbackHomeData().catch(() => null);
     return live?.latestByCategory[0] || fallbackArticles.find((item) => item.slug === slug) || null;
@@ -46,9 +47,9 @@ async function getArticle(slug: string) {
     const live = await getLiveFallbackHomeData().catch(() => null);
     return live?.latestByCategory[0] || fallbackArticles.find((item) => item.slug === slug) || null;
   }
-}
+});
 
-async function getRelated(categoryId: string, currentId: string) {
+const getRelated = cache(async (categoryId: string, currentId: string) => {
   try {
     const articles = await prisma.article.findMany({
       where: { status: "PUBLISHED", categoryId, id: { not: currentId } },
@@ -75,7 +76,7 @@ async function getRelated(categoryId: string, currentId: string) {
   return fallbackArticles
     .filter((item) => item.id !== currentId && (!current || item.category.slug === current.category.slug))
     .slice(0, 4);
-}
+});
 
 function getPlainText(html: string) {
   return html
@@ -144,8 +145,9 @@ export default async function ArticlePage({ params }: Props) {
     .filter(Boolean)
     .join(". ");
 
-  // Increment view (fire and forget)
-  prisma.article.update({ where: { id: article.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+  if (!article.id.startsWith("live-") && !article.id.startsWith("fallback-")) {
+    prisma.article.update({ where: { id: article.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,10 +1,36 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/site-url";
+import { getLiveFallbackHomeData } from "@/lib/live-fallback-content";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
   const staticRoutes = ["", "/about-us", "/our-team", "/careers", "/advertise", "/contact-us", "/privacy-policy", "/terms-of-use", "/cookie-policy", "/editorial-policy", "/corrections-policy", "/search"];
+
+  const live = await getLiveFallbackHomeData().catch(() => null);
+
+  if (live?.latestByCategory.length) {
+    return [
+      ...staticRoutes.map((route) => ({
+        url: `${siteUrl}${route}`,
+        lastModified: new Date(),
+        changeFrequency: "daily" as const,
+        priority: route ? 0.7 : 1,
+      })),
+      ...live.categories.map((category) => ({
+        url: `${siteUrl}/category/${category.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "hourly" as const,
+        priority: 0.8,
+      })),
+      ...live.latestByCategory.slice(0, 600).map((article) => ({
+        url: `${siteUrl}/article/${article.slug}`,
+        lastModified: article.updatedAt || article.publishedAt || new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.9,
+      })),
+    ];
+  }
 
   const [articles, categories] = await Promise.all([
     prisma.article.findMany({

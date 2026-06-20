@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
 import Link from "next/link";
 import { fallbackArticles, fallbackCategories } from "@/lib/fallback-content";
+import { getLiveFallbackHomeData } from "@/lib/live-fallback-content";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -17,17 +18,30 @@ interface Props {
 const PER_PAGE = 12;
 
 async function getCategory(slug: string) {
+  const live = await getLiveFallbackHomeData().catch(() => null);
+  const liveCategory = live?.categories.find((cat) => cat.slug === slug);
+  if (liveCategory) return liveCategory as any;
+
   try {
     const category = await prisma.category.findUnique({ where: { slug, isActive: true } });
-    return category || (fallbackCategories.find((cat) => cat.slug === slug) as any) || null;
+    if (category) return category;
   } catch (error) {
     console.error("Category data unavailable, rendering fallback category:", error);
-    return (fallbackCategories.find((cat) => cat.slug === slug) as any) || null;
   }
+
+  return (fallbackCategories.find((cat) => cat.slug === slug) as any)
+    || null;
 }
 
-async function getCategoryArticles(categoryId: string, page: number) {
+async function getCategoryArticles(categoryId: string, page: number, slug?: string) {
   const skip = (page - 1) * PER_PAGE;
+  const live = await getLiveFallbackHomeData().catch(() => null);
+  const liveArticles = live?.latestByCategory.filter((item) => item.category.slug === (slug || categoryId)) || [];
+  if (liveArticles.length || live?.categories.some((cat) => cat.slug === (slug || categoryId))) {
+    const paged = liveArticles.slice(skip, skip + PER_PAGE);
+    return { articles: paged, total: liveArticles.length, totalPages: Math.ceil(liveArticles.length / PER_PAGE) };
+  }
+
   try {
     const [articles, total] = await Promise.all([
       prisma.article.findMany({
@@ -71,7 +85,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const page = parseInt((await searchParams)?.page || "1");
   const category = await getCategory(slug);
   if (!category) notFound();
-  const { articles, total, totalPages } = await getCategoryArticles(category.id || category.slug, page);
+  const { articles, total, totalPages } = await getCategoryArticles(category.id || category.slug, page, slug);
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -7,6 +7,7 @@ import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
 import SearchBar from "@/components/ui/SearchBar";
 import { fallbackArticles, fallbackCategories } from "@/lib/fallback-content";
+import { getLiveFallbackHomeData } from "@/lib/live-fallback-content";
 
 interface Props {
   searchParams: Promise<{ q?: string; page?: string; category?: string }>;
@@ -38,8 +39,21 @@ export default async function SearchPage({ searchParams }: Props) {
   let articles: any[] = [];
   let total = 0;
   let categories: any[] = [];
+  const live = await getLiveFallbackHomeData().catch(() => null);
+  const livePool = live?.latestByCategory || [];
 
-  try {
+  if (live?.categories.length) {
+    categories = live.categories;
+    articles = q
+      ? livePool.filter((item) => {
+          const haystack = `${item.title} ${item.excerpt || ""} ${item.content || ""} ${item.category.name}`.toLowerCase();
+          return haystack.includes(q.toLowerCase()) && (!category || item.category.slug === category);
+        })
+      : [];
+    total = articles.length;
+  }
+
+  if (!categories.length) try {
     [articles, total, categories] = await Promise.all([
       q ? prisma.article.findMany({
         where, skip, take: PER_PAGE,
@@ -55,9 +69,10 @@ export default async function SearchPage({ searchParams }: Props) {
       prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
     ]);
     if (!categories.length || (q && !articles.length)) {
-      categories = fallbackCategories;
+      categories = live?.categories.length ? live.categories : fallbackCategories;
+      const pool = live?.latestByCategory.length ? live.latestByCategory : fallbackArticles;
       articles = q
-        ? fallbackArticles.filter((item) => {
+        ? pool.filter((item) => {
             const haystack = `${item.title} ${item.excerpt || ""} ${item.category.name}`.toLowerCase();
             return haystack.includes(q.toLowerCase()) && (!category || item.category.slug === category);
           })
@@ -67,9 +82,11 @@ export default async function SearchPage({ searchParams }: Props) {
   } catch (error) {
     console.error("Search data unavailable, rendering fallback search:", error);
     const normalized = q.toLowerCase();
-    categories = fallbackCategories;
+    const live = await getLiveFallbackHomeData().catch(() => null);
+    categories = live?.categories.length ? live.categories : fallbackCategories;
+    const pool = live?.latestByCategory.length ? live.latestByCategory : fallbackArticles;
     articles = q
-      ? fallbackArticles.filter((item) => {
+      ? pool.filter((item) => {
           const haystack = `${item.title} ${item.excerpt || ""} ${item.category.name}`.toLowerCase();
           return haystack.includes(normalized) && (!category || item.category.slug === category);
         })

@@ -8,18 +8,29 @@ export default function NewsRefreshOnOpen() {
 
   useEffect(() => {
     let cancelled = false;
+    const storageKey = "kenya-brief-news-refresh-at";
+    const minAgeMs = 10 * 60 * 1000;
 
-    fetch("/api/news/open-refresh", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data) => {
-        if (!cancelled && data?.success && Number(data.imported || 0) > 0) {
-          router.refresh();
-        }
-      })
-      .catch(() => {});
+    const runRefresh = () => {
+      const lastRefresh = Number(window.sessionStorage.getItem(storageKey) || 0);
+      if (Number.isFinite(lastRefresh) && Date.now() - lastRefresh < minAgeMs) return;
+
+      window.sessionStorage.setItem(storageKey, String(Date.now()));
+      fetch("/api/news/open-refresh", { cache: "no-store", keepalive: true })
+        .then((response) => response.json())
+        .then((data) => {
+          if (!cancelled && data?.success && Number(data.imported || 0) > 0) {
+            router.refresh();
+          }
+        })
+        .catch(() => {});
+    };
+
+    const timeout = window.setTimeout(runRefresh, 2500);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
   }, [router]);
 

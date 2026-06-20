@@ -1,38 +1,91 @@
-export const NEWS_AUTOMATION_UPDATE_INTERVAL_MINUTES = 4;
-export const NEWS_AUTOMATION_DEFAULT_CACHE_MINUTES = 4;
-export const NEWS_AUTOMATION_CRON_SCHEDULE = "0 0 * * *";
+export const NEWS_AUTOMATION_UPDATE_INTERVAL_MINUTES = 10;
+export const NEWS_AUTOMATION_DEFAULT_CACHE_MINUTES = 10;
+export const NEWS_AUTOMATION_CRON_SCHEDULE = "*/10 * * * *";
 export const PUBLIC_NEWS_AUTHOR_NAME = "Kenya Brief";
 export const NEWS_AUTOMATION_AUTHOR_EMAIL = "automation@kenyabrief.co.ke";
 
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  "Breaking News": ["breaking", "urgent", "developing", "live"],
-  Politics: ["president", "parliament", "senate", "mp", "governor", "election", "government", "cabinet", "court"],
-  Business: ["business", "market", "economy", "shilling", "bank", "trade", "tax", "revenue", "investment"],
-  Technology: ["technology", "tech", "startup", "ai", "digital", "software", "data", "cyber", "mobile"],
-  Sports: ["sport", "football", "rugby", "athletics", "marathon", "league", "match", "team", "coach"],
-  Entertainment: ["entertainment", "music", "film", "artist", "festival", "celebrity", "show", "culture"],
-  Health: ["health", "hospital", "doctor", "medicine", "sha", "disease", "patient", "clinic"],
-  Education: ["education", "school", "university", "teacher", "student", "exam", "kuccps", "tvet"],
-  Environment: ["environment", "climate", "rain", "flood", "forest", "wildlife", "drought", "conservation"],
-  Counties: ["county", "counties", "nairobi", "mombasa", "kisumu", "nakuru", "eldoret", "kiambu"],
-};
+const CATEGORY_KEYWORDS: Array<[string, string[]]> = [
+  ["Politics", ["president", "parliament", "senate", "mp", "governor", "election", "government", "cabinet", "court", "ruto", "odinga", "assembly", "finance bill", "bill", "mps", "minister"]],
+  ["Business", ["business", "market", "economy", "shilling", "bank", "trade", "tax", "revenue", "investment", "stock", "profit", "company", "fuel", "loan", "safaricom", "mobile market", "shares", "sme", "msme"]],
+  ["Health", ["health", "hospital", "doctor", "medicine", "medical", "sha", "uhc", "disease", "patient", "clinic", "nurse", "vaccine", "ebola", "malaria", "hiv", "programmes"]],
+  ["Sports", ["sport", "football", "rugby", "athletics", "marathon", "league", "match", "team", "coach", "formula 1", "formula one", "f1", "grand prix", "world cup", "fifa", "scotland", "spurs", "cricket"]],
+  ["Technology", ["technology", "tech", "startup", "ai", "digital", "software", "data", "cyber", "mobile app", "internet", "innovation"]],
+  ["Education", ["education", "school", "academy", "university", "teacher", "student", "exam", "kuccps", "tvet", "cbc", "kcse", "kcpe"]],
+  ["Environment", ["environment", "climate", "rain", "flood", "forest", "wildlife", "drought", "conservation", "pollution", "carbon", "water shortage"]],
+  ["Entertainment", ["entertainment", "music", "film", "artist", "festival", "celebrity", "show", "culture", "actor", "media"]],
+  ["Lifestyle", ["lifestyle", "parenting", "travel", "food", "fashion", "beauty", "family", "home", "wellness", "relationships", "habits"]],
+  ["Counties", ["county", "counties", "nairobi", "mombasa", "kisumu", "nakuru", "eldoret", "kiambu", "machakos", "kisii", "nyeri", "turkana"]],
+  ["World", ["world", "global", "israel", "gaza", "ukraine", "russia", "china", "united states", "south africa", "britain", "europe", "africa", "guinea-bissau", "iran", "dr congo", "india", "afghanistan"]],
+  ["Breaking News", ["breaking", "urgent", "developing", "live"]],
+];
+
+const SEARCH_TITLE_PREFIXES = [
+  "Kenya",
+  "Nairobi",
+  "Ruto",
+  "SHA",
+  "HELB",
+  "KUCCPS",
+  "KRA",
+  "KPLC",
+  "Safaricom",
+  "Harambee Stars",
+  "Eliud Kipchoge",
+  "William Ruto",
+  "Raila Odinga",
+  "Father's Day",
+];
+
+const JUNK_TEXT_PATTERN = /[#@$%^*_={}\[\]\\|<>]{2,}|(?:&[#a-z0-9]+;){2,}|[\uFFFD]{1,}/i;
 
 export interface FetchedNewsItem {
   title: string;
   summary?: string | null;
+  bodyText?: string | null;
   publishedAt?: Date | string | null;
   imageUrl?: string | null;
   sourceName?: string | null;
 }
 
-function sentenceCase(text: string) {
-  const cleaned = text
-    .replace(/\s+/g, " ")
-    .replace(/["'\u201c\u201d\u2018\u2019]/g, "")
-    .replace(/\s[-\u2013\u2014]\s.+$/, "")
-    .trim();
+function decodeHtmlEntities(text: string) {
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
 
-  if (!cleaned) return "Kenya Brief news update";
+export function cleanNewsText(text: string) {
+  return decodeHtmlEntities(text || "")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/[#@$%^*_={}\[\]\\|<>]+/g, " ")
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanTitleText(text: string) {
+  return cleanNewsText(text)
+    .replace(/["\u201c\u201d]/g, "")
+    .replace(/\s[-\u2013\u2014]\s.+$/, "")
+    .replace(/\bread more\b.+$/i, "")
+    .replace(/\baccording to\b.+$/i, "")
+    .trim();
+}
+
+export function hasUsableNewsText(text?: string | null, minLength = 35) {
+  const cleaned = cleanNewsText(text || "");
+  return cleaned.length >= minLength && !JUNK_TEXT_PATTERN.test(text || "");
+}
+
+function sentenceCase(text: string) {
+  const cleaned = cleanTitleText(text);
+  if (!cleaned) return "Kenya news update";
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
@@ -52,7 +105,7 @@ function rewriteCommonNewsTerms(text: string) {
 }
 
 function trimToSentence(text: string, maxLength: number) {
-  const cleaned = text.replace(/\s+/g, " ").trim();
+  const cleaned = cleanNewsText(text);
   if (cleaned.length <= maxLength) return cleaned;
 
   const shortened = cleaned.slice(0, maxLength - 3).trim();
@@ -60,25 +113,89 @@ function trimToSentence(text: string, maxLength: number) {
   return `${shortened.slice(0, lastBreak > 80 ? lastBreak : shortened.length).trim()}...`;
 }
 
-export function classifyNewsCategory(item: Pick<FetchedNewsItem, "title" | "summary">) {
-  const haystack = `${item.title} ${item.summary || ""}`.toLowerCase();
-  const match = Object.entries(CATEGORY_KEYWORDS).find(([, keywords]) =>
-    keywords.some((keyword) => haystack.includes(keyword))
-  );
-
-  return match?.[0] || "Breaking News";
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-export function createKenyaBriefTitle(title: string) {
-  return trimToSentence(rewriteCommonNewsTerms(sentenceCase(title)), 90);
+export function classifyNewsCategory(item: Pick<FetchedNewsItem, "title" | "summary" | "sourceName">) {
+  const source = item.sourceName?.toLowerCase() || "";
+  if (source.includes("formula 1") || source.includes("football") || source.includes("fifa")) {
+    return "Sports";
+  }
+
+  const haystack = ` ${item.title} ${item.summary || ""} `.toLowerCase();
+  const scores = CATEGORY_KEYWORDS.map(([category, keywords]) => {
+    const score = keywords.reduce((total, keyword) => {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = keyword.includes(" ")
+        ? new RegExp(escaped, "i")
+        : new RegExp(`\\b${escaped}\\b`, "i");
+      return total + (pattern.test(haystack) ? 1 : 0);
+    }, 0);
+    return { category, score };
+  }).filter((item) => item.score > 0);
+
+  const match = scores.sort((a, b) => b.score - a.score)[0];
+  return match?.category || "Breaking News";
 }
 
-export function createKenyaBriefSummary(item: Pick<FetchedNewsItem, "title" | "summary">) {
-  const basis = item.summary || item.title;
-  const cleaned = rewriteCommonNewsTerms(sentenceCase(basis))
-    .replace(/\baccording to\b.+$/i, "")
-    .replace(/\bread more\b.+$/i, "")
-    .trim();
+function findMatchingSearchPhrase(item: Pick<FetchedNewsItem, "title" | "summary">, searchTrends: string[] = []) {
+  const haystack = cleanNewsText(`${item.title} ${item.summary || ""}`).toLowerCase();
+  const candidates = [...searchTrends, ...SEARCH_TITLE_PREFIXES]
+    .map((term) => cleanNewsText(term))
+    .filter((term) => term.length >= 3);
 
-  return trimToSentence(cleaned, 220) || "The Kenya Brief is tracking this developing story and will update readers as more details become available.";
+  return candidates.find((term) => haystack.includes(term.toLowerCase()));
+}
+
+export function createKenyaBriefTitle(itemOrTitle: string | Pick<FetchedNewsItem, "title" | "summary">, searchTrends: string[] = []) {
+  const item = typeof itemOrTitle === "string" ? { title: itemOrTitle } : itemOrTitle;
+  const base = rewriteCommonNewsTerms(sentenceCase(item.title));
+  const trendPhrase = findMatchingSearchPhrase(item, searchTrends);
+  const withSearchPhrase = trendPhrase && !base.toLowerCase().startsWith(trendPhrase.toLowerCase())
+    ? `${trendPhrase}: ${base}`
+    : base;
+
+  return trimToSentence(withSearchPhrase, 95);
+}
+
+export function createKenyaBriefSummary(item: Pick<FetchedNewsItem, "title" | "summary" | "bodyText">) {
+  const basis = hasUsableNewsText(item.summary, 60)
+    ? item.summary
+    : hasUsableNewsText(item.bodyText, 100)
+      ? item.bodyText
+      : item.title;
+  const cleaned = rewriteCommonNewsTerms(sentenceCase(basis || ""));
+  return trimToSentence(cleaned, 260) || "A developing Kenya news update is available from the publisher.";
+}
+
+function rewriteParagraph(text: string) {
+  return trimToSentence(rewriteCommonNewsTerms(sentenceCase(text)), 620);
+}
+
+export function createKenyaBriefArticleContent(item: Pick<FetchedNewsItem, "title" | "summary" | "bodyText" | "sourceName">) {
+  const summary = createKenyaBriefSummary(item);
+  const bodyParagraphs = (item.bodyText || "")
+    .split(/\n{2,}|(?<=\.)\s+(?=[A-Z])/)
+    .map((paragraph) => rewriteParagraph(paragraph))
+    .filter((paragraph) => paragraph.length > 70 && !JUNK_TEXT_PATTERN.test(paragraph))
+    .slice(0, 10);
+
+  if (bodyParagraphs.length >= 2) {
+    const paragraphs = bodyParagraphs[0] === summary ? bodyParagraphs : [summary, ...bodyParagraphs];
+    return paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+  }
+
+  const source = item.sourceName ? ` from ${item.sourceName}` : "";
+  const conciseBrief = [
+    summary,
+    `The available publisher details${source} are limited, so this story is being carried as a concise brief until fuller verified reporting is available.`,
+  ];
+
+  return conciseBrief.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
 }

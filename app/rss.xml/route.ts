@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/site-url";
+import { getLiveFallbackHomeData } from "@/lib/live-fallback-content";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,8 @@ function escapeXml(value: string) {
 
 export async function GET() {
   const siteUrl = getSiteUrl();
-  const articles = await prisma.article.findMany({
+  const live = await getLiveFallbackHomeData().catch(() => null);
+  const articles = live?.latestByCategory.length ? live.latestByCategory.slice(0, 50) : await prisma.article.findMany({
     where: { status: "PUBLISHED" },
     orderBy: { publishedAt: "desc" },
     take: 50,

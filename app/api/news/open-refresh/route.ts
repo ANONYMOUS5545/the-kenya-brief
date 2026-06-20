@@ -33,6 +33,7 @@ export async function GET() {
 
     const result = await runNewsIngestion();
     revalidatePath("/");
+    revalidatePath("/search");
 
     return NextResponse.json({ success: true, cacheMinutes, ...result });
   } catch (error) {

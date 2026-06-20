@@ -6,7 +6,7 @@ export const fallbackCategories: CategoryWithCount[] = [
   { id: "fallback-politics", name: "Politics", slug: "politics", color: "#B5001A", icon: "P", _count: { articles: 3 } },
   { id: "fallback-business", name: "Business", slug: "business", color: "#0057A8", icon: "B", _count: { articles: 3 } },
   { id: "fallback-sports", name: "Sports", slug: "sports", color: "#168A3A", icon: "S", _count: { articles: 2 } },
-  { id: "fallback-entertainment", name: "Entertainment", slug: "entertainment", color: "#8A2BE2", icon: "E", _count: { articles: 1 } },
+  { id: "fallback-entertainment", name: "Entertainment", slug: "entertainment", color: "#8A2BE2", icon: "E", _count: { articles: 2 } },
   { id: "fallback-technology", name: "Technology", slug: "technology", color: "#0B7FAB", icon: "T", _count: { articles: 2 } },
   { id: "fallback-health", name: "Health", slug: "health", color: "#0F9D76", icon: "H", _count: { articles: 1 } },
   { id: "fallback-world", name: "World", slug: "world", color: "#4B5563", icon: "W", _count: { articles: 1 } },
@@ -106,6 +106,14 @@ export const fallbackArticles: ArticleWithRelations[] = [
     "entertainment",
     "Kenyan musicians and filmmakers are posting strong streaming numbers as audiences embrace homegrown stories.",
     { viewCount: 2190 }
+  ),
+  article(
+    "fallback-polygamist",
+    "The Polygamist on Netflix: Why the South African drama is trending in Kenya",
+    "the-polygamist-netflix-trending-kenya",
+    "entertainment",
+    "The Polygamist is drawing Kenyan search interest as viewers debate the Netflix drama's story of love, betrayal, family secrets and power.",
+    { isTrending: true, viewCount: 3360 }
   ),
   article(
     "fallback-7",
