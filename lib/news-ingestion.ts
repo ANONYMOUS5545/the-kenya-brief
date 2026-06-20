@@ -8,7 +8,9 @@ import {
   createKenyaBriefArticleContent,
   createKenyaBriefSummary,
   createKenyaBriefTitle,
+  hasFullArticleContext,
   hasUsableNewsText,
+  sanitizeExistingArticleHtml,
 } from "@/lib/news-automation";
 import { writeNewsCache } from "@/lib/news-cache";
 import { fetchAndCacheSeoTrends, scoreTextAgainstTrends, trendTerms } from "@/lib/seo-trends";
@@ -120,7 +122,7 @@ function pickArticleBody(html: string) {
     .map((match) => toPlainText(match[1]))
     .filter((text) =>
       text.length > 60
-      && !/subscribe|sign in|advertisement|newsletter|copyright|all rights reserved|cookies/i.test(text)
+      && !/subscribe|sign in|advertisement|newsletter|copyright|all rights reserved|cookies|top stories today|receive breaking stories|directly on your device|also read|related stories/i.test(text)
     );
 
   return paragraphs.slice(0, 9).join("\n\n").slice(0, 5000).trim();
@@ -364,6 +366,42 @@ async function ensureAnnualRankingArticles(authorId: string) {
   return published;
 }
 
+async function repairExistingAutomatedArticles() {
+  const articles = await prisma.article.findMany({
+    where: { isAutomated: true, status: "PUBLISHED" },
+    select: { id: true, content: true },
+    take: 500,
+  });
+  let cleaned = 0;
+  let archived = 0;
+
+  for (const article of articles) {
+    const repairedContent = sanitizeExistingArticleHtml(article.content);
+
+    if (!repairedContent) {
+      await prisma.article.update({
+        where: { id: article.id },
+        data: {
+          status: "ARCHIVED",
+          rejectionReason: "Archived automatically because the imported article did not contain enough clean publisher context.",
+        },
+      });
+      archived += 1;
+      continue;
+    }
+
+    if (repairedContent !== article.content) {
+      await prisma.article.update({
+        where: { id: article.id },
+        data: { content: repairedContent, readTime: estimateReadTime(repairedContent) },
+      });
+      cleaned += 1;
+    }
+  }
+
+  return { cleaned, archived };
+}
+
 async function fetchSource(source: NewsSource) {
   const response = await fetchWithTimeout(source.feedUrl);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -415,6 +453,7 @@ export async function fetchLatestNewsItems(limit = MAX_IMPORTS_PER_RUN) {
   const items = fetchedSources
     .flat()
     .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+    .filter((item) => hasFullArticleContext(item))
     .filter((item) => {
       const key = `${normalizeTitle(item.title)}:${item.publishedAt.toISOString().slice(0, 10)}`;
       if (seen.has(key)) return false;
@@ -452,6 +491,10 @@ export async function runNewsIngestion() {
 
   const categoryNames = Object.keys(CATEGORY_META);
   await Promise.all(categoryNames.map((name, index) => ensureCategory(name, index + 1)));
+  const repairedArticles = await repairExistingAutomatedArticles().catch((error) => {
+    console.error("Automated article repair failed:", error);
+    return { cleaned: 0, archived: 0 };
+  });
 
   const logs: string[] = [];
   const seenKeys = new Set<string>();
@@ -498,6 +541,10 @@ export async function runNewsIngestion() {
 
     const category = await ensureCategory(classifyNewsCategory(item));
     const content = createKenyaBriefArticleContent(item);
+    if (!content) {
+      skipped += 1;
+      continue;
+    }
 
     try {
       await prisma.article.create({
@@ -560,9 +607,9 @@ export async function runNewsIngestion() {
 
   await logNewsAutomation(
     failed ? "NEWS_AUTOMATION_SYNC_WITH_FAILURES" : "NEWS_AUTOMATION_SYNC",
-    `Imported: ${imported}. Annual rankings published: ${annualRankingsPublished}. Special stories published: ${specialStoriesPublished}. Duplicates skipped: ${skipped}. Failed sources: ${failed}. SEO trends used: ${searchTerms.slice(0, 8).join(", ") || "none"}. ${logs.join(" | ")}`,
+    `Imported: ${imported}. Existing automated articles cleaned: ${repairedArticles.cleaned}. Existing automated articles archived: ${repairedArticles.archived}. Annual rankings published: ${annualRankingsPublished}. Special stories published: ${specialStoriesPublished}. Duplicates skipped: ${skipped}. Failed sources: ${failed}. SEO trends used: ${searchTerms.slice(0, 8).join(", ") || "none"}. ${logs.join(" | ")}`,
     author.id
   );
 
-  return { imported, annualRankingsPublished, specialStoriesPublished, skipped, failed, trends: searchTerms.slice(0, 12), logs };
+  return { imported, repairedArticles, annualRankingsPublished, specialStoriesPublished, skipped, failed, trends: searchTerms.slice(0, 12), logs };
 }

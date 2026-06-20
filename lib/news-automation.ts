@@ -37,6 +37,9 @@ const SEARCH_TITLE_PREFIXES = [
 ];
 
 const JUNK_TEXT_PATTERN = /[#@$%^*_={}\[\]\\|<>]{2,}|(?:&[#a-z0-9]+;){2,}|[\uFFFD]{1,}/i;
+const UNPROFESSIONAL_TEXT_PATTERN = /\b(top stories today|receive breaking stories|directly on your device|available publisher details|concise brief|fuller verified reporting|read the original|read more|also read|related stories|subscribe|sign in|newsletter|advertisement|cookie policy|all rights reserved|click here)\b/i;
+const MIN_FULL_CONTEXT_PARAGRAPHS = 3;
+const MIN_FULL_CONTEXT_CHARS = 450;
 
 export interface FetchedNewsItem {
   title: string;
@@ -71,7 +74,6 @@ export function cleanNewsText(text: string) {
 
 function cleanTitleText(text: string) {
   return cleanNewsText(text)
-    .replace(/["\u201c\u201d]/g, "")
     .replace(/\s[-\u2013\u2014]\s.+$/, "")
     .replace(/\bread more\b.+$/i, "")
     .replace(/\baccording to\b.+$/i, "")
@@ -80,7 +82,7 @@ function cleanTitleText(text: string) {
 
 export function hasUsableNewsText(text?: string | null, minLength = 35) {
   const cleaned = cleanNewsText(text || "");
-  return cleaned.length >= minLength && !JUNK_TEXT_PATTERN.test(text || "");
+  return cleaned.length >= minLength && !JUNK_TEXT_PATTERN.test(text || "") && !UNPROFESSIONAL_TEXT_PATTERN.test(cleaned);
 }
 
 function sentenceCase(text: string) {
@@ -120,6 +122,45 @@ function escapeHtml(text: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function normalizeParagraphKey(text: string) {
+  return cleanNewsText(text).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function paragraphsFromText(text?: string | null) {
+  return (text || "")
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .split(/\n{2,}|(?<=\.)\s+(?=[A-Z"'])/)
+    .map((paragraph) => cleanNewsText(paragraph))
+    .filter((paragraph) => paragraph.length > 70)
+    .filter((paragraph) => !JUNK_TEXT_PATTERN.test(paragraph) && !UNPROFESSIONAL_TEXT_PATTERN.test(paragraph));
+}
+
+export function sanitizeArticleParagraphs(text?: string | null) {
+  const seen = new Set<string>();
+
+  return paragraphsFromText(text)
+    .map((paragraph) => rewriteParagraph(paragraph))
+    .filter((paragraph) => {
+      const key = normalizeParagraphKey(paragraph);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+export function hasFullArticleContext(item: Pick<FetchedNewsItem, "bodyText" | "summary">) {
+  const paragraphs = sanitizeArticleParagraphs(item.bodyText);
+  const charCount = paragraphs.join(" ").length;
+  return paragraphs.length >= MIN_FULL_CONTEXT_PARAGRAPHS && charCount >= MIN_FULL_CONTEXT_CHARS;
+}
+
+export function sanitizeExistingArticleHtml(html: string) {
+  const paragraphs = sanitizeArticleParagraphs(html);
+  if (paragraphs.length < MIN_FULL_CONTEXT_PARAGRAPHS) return null;
+  return paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
 }
 
 export function classifyNewsCategory(item: Pick<FetchedNewsItem, "title" | "summary" | "sourceName">) {
@@ -171,7 +212,7 @@ export function createKenyaBriefSummary(item: Pick<FetchedNewsItem, "title" | "s
       ? item.bodyText
       : item.title;
   const cleaned = rewriteCommonNewsTerms(sentenceCase(basis || ""));
-  return trimToSentence(cleaned, 260) || "A developing Kenya news update is available from the publisher.";
+  return trimToSentence(cleaned, 260);
 }
 
 function rewriteParagraph(text: string) {
@@ -180,22 +221,21 @@ function rewriteParagraph(text: string) {
 
 export function createKenyaBriefArticleContent(item: Pick<FetchedNewsItem, "title" | "summary" | "bodyText" | "sourceName">) {
   const summary = createKenyaBriefSummary(item);
-  const bodyParagraphs = (item.bodyText || "")
-    .split(/\n{2,}|(?<=\.)\s+(?=[A-Z])/)
-    .map((paragraph) => rewriteParagraph(paragraph))
-    .filter((paragraph) => paragraph.length > 70 && !JUNK_TEXT_PATTERN.test(paragraph))
-    .slice(0, 10);
+  const bodyParagraphs = sanitizeArticleParagraphs(item.bodyText).slice(0, 10);
+  const bodyTextLength = bodyParagraphs.join(" ").length;
 
-  if (bodyParagraphs.length >= 2) {
-    const paragraphs = bodyParagraphs[0] === summary ? bodyParagraphs : [summary, ...bodyParagraphs];
-    return paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+  if (bodyParagraphs.length < MIN_FULL_CONTEXT_PARAGRAPHS || bodyTextLength < MIN_FULL_CONTEXT_CHARS) {
+    return null;
   }
 
-  const source = item.sourceName ? ` from ${item.sourceName}` : "";
-  const conciseBrief = [
-    summary,
-    `The available publisher details${source} are limited, so this story is being carried as a concise brief until fuller verified reporting is available.`,
-  ];
+  const paragraphs = summary ? [summary, ...bodyParagraphs] : bodyParagraphs;
+  const seen = new Set<string>();
+  const unique = paragraphs.filter((paragraph) => {
+    const key = normalizeParagraphKey(paragraph);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
-  return conciseBrief.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+  return unique.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
 }

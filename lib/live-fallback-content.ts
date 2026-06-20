@@ -1,7 +1,8 @@
 import type { ArticleWithRelations, CategoryWithCount } from "@/types";
 import { estimateReadTime, slugify } from "@/lib/utils";
-import { classifyNewsCategory, createKenyaBriefArticleContent, createKenyaBriefSummary, createKenyaBriefTitle } from "@/lib/news-automation";
+import { classifyNewsCategory, createKenyaBriefArticleContent, createKenyaBriefSummary, createKenyaBriefTitle, hasFullArticleContext } from "@/lib/news-automation";
 import { readNewsCache } from "@/lib/news-cache";
+import { fallbackArticles } from "@/lib/fallback-content";
 import type { FeedItem } from "@/lib/news-ingestion";
 
 const author = { id: "live-news-author", name: "Kenya Brief", image: null };
@@ -65,6 +66,7 @@ export function liveArticleFromFeedItem(item: FeedItem, index = 0): ArticleWithR
   const summary = createKenyaBriefSummary(item);
   const category = categoryFor(item);
   const content = createKenyaBriefArticleContent(item);
+  if (!content) throw new Error("Live article does not have enough clean context.");
 
   return {
     id: `live-${slugify(item.link || title)}`,
@@ -137,8 +139,18 @@ function balanceArticlesForHome(articles: ArticleWithRelations[]) {
 }
 
 async function buildLiveFallbackHomeData() {
-  const items = (await readNewsCache()).slice(0, 180);
-  const allArticles = items.map(liveArticleFromFeedItem);
+  const items = (await readNewsCache()).filter((item) => hasFullArticleContext(item)).slice(0, 180);
+  const liveArticles = items.flatMap((item, index) => {
+    try {
+      return [liveArticleFromFeedItem(item, index)];
+    } catch {
+      return [];
+    }
+  });
+  const curatedArticles = fallbackArticles.filter((article) =>
+    ["the-polygamist-netflix-trending-kenya", "top-50-influential-kenyans-2026", "best-smes-in-kenya-nairobi-2026"].includes(article.slug)
+  );
+  const allArticles = [...curatedArticles, ...liveArticles.filter((article) => !curatedArticles.some((curated) => curated.slug === article.slug))];
   const articles = balanceArticlesForHome(allArticles);
   const counts = new Map<string, number>();
 
@@ -184,5 +196,16 @@ export async function getLiveFallbackHomeData() {
 }
 
 export async function getLiveFallbackArticle(slug: string) {
-  return (await readNewsCache()).map(liveArticleFromFeedItem).find((item) => item.slug === slug) || null;
+  const curated = fallbackArticles.find((item) => item.slug === slug);
+  if (curated) return curated;
+
+  const items = (await readNewsCache()).filter((item) => hasFullArticleContext(item));
+  for (const item of items) {
+    try {
+      const article = liveArticleFromFeedItem(item);
+      if (article.slug === slug) return article;
+    } catch {}
+  }
+
+  return null;
 }

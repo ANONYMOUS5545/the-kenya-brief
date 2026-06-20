@@ -131,6 +131,22 @@ export const fallbackArticles: ArticleWithRelations[] = [
     "Retailers say digital records are becoming essential as compliance rules become stricter across the sector.",
     { viewCount: 1740 }
   ),
+  article(
+    "fallback-top-50-kenyans",
+    "Top 50 Influential Kenyans 2026: Leaders, Entrepreneurs, Athletes and Creators to Watch",
+    "top-50-influential-kenyans-2026",
+    "entertainment",
+    "An annual ranking of influential Kenyans shaping politics, business, technology, sport, culture, public service and civic life.",
+    { isTrending: true, viewCount: 4520 }
+  ),
+  article(
+    "fallback-best-smes",
+    "Best SMEs in Kenya and Nairobi 2026: Top Small Businesses, Startups and Local Brands",
+    "best-smes-in-kenya-nairobi-2026",
+    "business",
+    "An annual guide to standout SMEs in Kenya and Nairobi, covering small businesses, startups, local brands and fast-growing founders.",
+    { isTrending: true, viewCount: 3940 }
+  ),
 ];
 
 export function getFallbackHomeData() {
