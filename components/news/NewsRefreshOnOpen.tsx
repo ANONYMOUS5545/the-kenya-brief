@@ -9,7 +9,7 @@ export default function NewsRefreshOnOpen() {
   useEffect(() => {
     let cancelled = false;
     const storageKey = "kenya-brief-news-refresh-at";
-    const minAgeMs = 10 * 60 * 1000;
+    const minAgeMs = 5 * 60 * 1000; // Reduced from 10 to 5 minutes for more frequent updates
 
     const runRefresh = () => {
       const lastRefresh = Number(window.sessionStorage.getItem(storageKey) || 0);

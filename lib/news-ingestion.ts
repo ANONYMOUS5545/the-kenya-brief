@@ -11,6 +11,7 @@ import {
   hasCorruptNewsText,
   hasFullArticleContext,
   hasUsableNewsText,
+  isNtvPodcastOrSportsPromo,
   sanitizeExistingArticleHtml,
 } from "@/lib/news-automation";
 import { writeNewsCache } from "@/lib/news-cache";
@@ -145,6 +146,63 @@ function normalizeUrl(url: string) {
   }
 }
 
+function isValidImageUrl(url?: string | null): boolean {
+  if (!url || typeof url !== "string") return false;
+  try {
+    const normalized = url.trim();
+    if (!normalized) return false;
+    
+    // Must be http or https
+    if (!normalized.toLowerCase().startsWith("http://") && !normalized.toLowerCase().startsWith("https://")) {
+      return false;
+    }
+    
+    // Must have valid URL structure
+    new URL(normalized);
+    
+    // Check common image extensions
+    const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+    const lowerUrl = normalized.toLowerCase();
+    
+    // Either has image extension or is a known image service (cdn, media, etc)
+    const hasImageExtension = imageExtensions.some((ext) => lowerUrl.includes(ext));
+    const isImageService =
+      lowerUrl.includes("cdn") ||
+      lowerUrl.includes("image") ||
+      lowerUrl.includes("media") ||
+      lowerUrl.includes("img") ||
+      lowerUrl.includes("photo") ||
+      lowerUrl.includes("pic");
+
+    return hasImageExtension || isImageService;
+  } catch {
+    return false;
+  }
+}
+
+function makeAbsoluteUrl(url: string, baseUrl: string): string {
+  if (!url) return "";
+  
+  try {
+    // Already absolute
+    if (url.toLowerCase().startsWith("http://") || url.toLowerCase().startsWith("https://")) {
+      return url;
+    }
+
+    // Relative URL - convert to absolute using base URL
+    if (url.startsWith("/")) {
+      const base = new URL(baseUrl);
+      return new URL(url, base.origin).toString();
+    }
+
+    // Relative path
+    const base = new URL(baseUrl);
+    return new URL(url, base).toString();
+  } catch {
+    return url;
+  }
+}
+
 function normalizeTitle(title: string) {
   return title.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -161,19 +219,44 @@ function parseFeed(xml: string, sourceName: string): FeedItem[] {
       const dateText = pickRawTag(item, "pubDate") || pickRawTag(item, "published") || pickRawTag(item, "updated");
       const author = pickTag(item, "dc:creator") || pickTag(item, "author");
       const publishedAt = dateText ? new Date(dateText) : new Date();
+      const link = normalizeUrl(rssLink || atomLink);
+      
+      let imageUrl = pickImage(item);
+      
+      // Ensure image URL is absolute using the article link as base
+      if (imageUrl && link) {
+        imageUrl = makeAbsoluteUrl(imageUrl, link);
+        if (!isValidImageUrl(imageUrl)) {
+          imageUrl = null;
+        }
+      } else if (imageUrl) {
+        // No link available, validate as-is
+        if (!isValidImageUrl(imageUrl)) {
+          imageUrl = null;
+        }
+      }
 
       return {
         title,
-        link: normalizeUrl(rssLink || atomLink),
+        link,
         summary,
         publishedAt: Number.isNaN(publishedAt.getTime()) ? new Date() : publishedAt,
         author,
-        imageUrl: pickImage(item),
+        imageUrl,
         imageCaption: pickTag(item, "media:description") || pickTag(item, "media:title") || null,
         sourceName,
       };
     })
-    .filter((item) => hasUsableNewsText(item.title, 6) && item.link);
+    .filter((item) => hasUsableNewsText(item.title, 6) && item.link && item.imageUrl)
+    .filter((item) => {
+      // Filter out NTV podcasts and sports promo content
+      if (sourceName.toLowerCase().includes("ntv")) {
+        if (isNtvPodcastOrSportsPromo(item.title, item.summary)) {
+          return false;
+        }
+      }
+      return true;
+    });
 }
 
 async function fetchWithTimeout(url: string) {
@@ -428,14 +511,31 @@ async function fetchSource(source: NewsSource) {
       const articleResponse = await fetchWithTimeout(item.link);
       if (!articleResponse.ok) return item;
       const html = await articleResponse.text();
-      const imageUrl = pickMetaImage(html);
+      let imageUrl = pickMetaImage(html);
       const bodyText = pickArticleBody(html);
+
+      // Ensure image URL is absolute and valid
+      if (imageUrl) {
+        imageUrl = makeAbsoluteUrl(imageUrl, item.link);
+        if (!isValidImageUrl(imageUrl)) {
+          imageUrl = null;
+        }
+      }
+
+      // Fallback to item image if meta image not available
+      if (!imageUrl && item.imageUrl) {
+        imageUrl = makeAbsoluteUrl(item.imageUrl, item.link);
+        if (!isValidImageUrl(imageUrl)) {
+          imageUrl = null;
+        }
+      }
+
       return {
         ...item,
         summary: hasUsableNewsText(item.summary, 50) ? item.summary : bodyText || item.summary,
         bodyText: hasUsableNewsText(bodyText, 160) ? bodyText : item.bodyText,
-        imageUrl: imageUrl || item.imageUrl,
-        imageCaption: item.imageCaption || ((imageUrl || item.imageUrl) ? `Photo: ${item.sourceName}` : null),
+        imageUrl: imageUrl || null,
+        imageCaption: item.imageCaption || (imageUrl ? `Photo: ${item.sourceName}` : null),
       };
     } catch {
       return item;
@@ -465,7 +565,7 @@ export async function fetchLatestNewsItems(limit = MAX_IMPORTS_PER_RUN) {
   const items = fetchedSources
     .flat()
     .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
-    .filter((item) => hasFullArticleContext(item))
+    .filter((item) => item.imageUrl && isValidImageUrl(item.imageUrl) && hasFullArticleContext(item))
     .filter((item) => {
       const key = `${normalizeTitle(item.title)}:${item.publishedAt.toISOString().slice(0, 10)}`;
       if (seen.has(key)) return false;

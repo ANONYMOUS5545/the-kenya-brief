@@ -50,11 +50,16 @@ export default function Header() {
         })
         .catch(() => {});
     };
+    
     const timeout = window.setTimeout(loadHeadlines, 1500);
+    
+    // Refresh headlines every 30 seconds for up-to-date breaking news
+    const interval = setInterval(loadHeadlines, 30000);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timeout);
+      clearInterval(interval);
     };
   }, []);
 

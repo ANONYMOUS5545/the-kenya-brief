@@ -84,6 +84,27 @@ export function hasCorruptNewsText(text?: string | null) {
   return JUNK_TEXT_PATTERN.test(text || "") || /&\s*#?\s*\d{2,7};?/i.test(text || "");
 }
 
+export function isNtvPodcastOrSportsPromo(title: string, summary?: string | null): boolean {
+  const text = `${title} ${summary || ""}`.toLowerCase();
+  const podcastPatterns = [
+    /\bpodcast\b/i,
+    /\bepisode\s+\d+\b/i,
+    /\blisten\s+now\b/i,
+    /\baudio\b/i,
+    /\bdownload\b.*\bpodcast\b/i,
+  ];
+
+  const sportPromoPatterns = [
+    /\b(formula\s*1|f1|rugby|cricket|football)\b.*\b(episode|podcast|exclusive|behind[- ]the[- ]scenes)\b/i,
+    /\bntv\b.*\b(sports\s+show|sports\s+hub|exclusive.*sports|sports.*exclusive)\b/i,
+  ];
+
+  return (
+    podcastPatterns.some((pattern) => pattern.test(text)) ||
+    sportPromoPatterns.some((pattern) => pattern.test(text))
+  );
+}
+
 function cleanTitleText(text: string) {
   return cleanNewsText(text)
     .replace(/\s[-\u2013\u2014]\s.+$/, "")

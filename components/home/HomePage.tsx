@@ -2,12 +2,13 @@ import { prisma } from "@/lib/prisma";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/article/ArticleCard";
+import BreakingNewsCarousel from "@/components/article/BreakingNewsCarousel";
 import NewsletterForm from "@/components/ui/NewsletterForm";
 import NewsRefreshOnOpen from "@/components/news/NewsRefreshOnOpen";
 import { getFallbackHomeData } from "@/lib/fallback-content";
 import { getLiveFallbackHomeData } from "@/lib/live-fallback-content";
 import Link from "next/link";
-import { TrendingUp, Flame, ChevronRight } from "lucide-react";
+import { TrendingUp, ChevronRight } from "lucide-react";
 
 async function queryHomeData() {
   const [featured, trending, breaking, latestByCategory, categories] = await Promise.all([
@@ -36,7 +37,7 @@ async function queryHomeData() {
       prisma.article.findMany({
         where: { status: "PUBLISHED", isBreaking: true },
         orderBy: { publishedAt: "desc" },
-        take: 3,
+        take: 6,
         include: {
           author: { select: { id: true, name: true, image: true } },
           category: { select: { id: true, name: true, slug: true, color: true } },
@@ -143,29 +144,24 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Breaking News */}
+        {/* Breaking News Carousel */}
         {breaking.length > 0 && (
-          <section className="bg-red-700 py-6">
-            <div className="container mx-auto px-4">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="bg-white text-red-700 font-bold text-xs px-3 py-1 rounded-full font-sans uppercase tracking-wider flex items-center gap-1">
-                  <Flame size={12} /> Breaking
-                </span>
-                <h2 className="text-white font-bold text-lg" style={{ fontFamily: "Georgia, serif" }}>Latest Breaking News</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {breaking.map((article) => (
-                  <Link key={article.id} href={`/article/${article.slug}`} className="group">
-                    <div className="bg-red-600 hover:bg-red-500 rounded-lg p-4 transition-colors h-full">
-                      <span className="text-red-200 text-xs font-sans uppercase tracking-wide">{article.category?.name}</span>
-                      <h3 className="text-white font-bold mt-1 text-sm leading-snug group-hover:underline line-clamp-3">
-                        {article.title}
-                      </h3>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
+          <section className="container mx-auto px-4 py-8">
+            <BreakingNewsCarousel
+              slides={breaking.map((article) => ({
+                id: article.id,
+                title: article.title,
+                slug: article.slug,
+                excerpt: article.excerpt,
+                category: article.category
+                  ? {
+                      name: article.category.name,
+                      color: article.category.color || "#C8102E",
+                    }
+                  : undefined,
+              }))}
+              autoPlayInterval={5000}
+            />
           </section>
         )}
 

@@ -1,4 +1,5 @@
-export const dynamic = "force-dynamic";
+// Enable ISR with 60 second revalidation for better performance
+export const revalidate = 60;
 
 import type { Metadata } from "next";
 import { readSeoTrendCache, trendTerms } from "@/lib/seo-trends";
