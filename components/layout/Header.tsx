@@ -42,29 +42,48 @@ export default function Header() {
 
   useEffect(() => {
     let cancelled = false;
-    const loadHeadlines = () => {
-      fetch(`/api/news/headlines?t=${Date.now()}`, { 
-        cache: "no-store",
-        headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate",
-        },
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (!cancelled && Array.isArray(data?.headlines) && data.headlines.length > 0) {
-            setHeadlines(data.headlines);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to load headlines:", err);
+    let retryCount = 0;
+    const maxRetries = 10;
+
+    const loadHeadlines = async () => {
+      try {
+        const response = await fetch(`/api/news/headlines?t=${Date.now()}`, { 
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          },
         });
+
+        if (!cancelled) {
+          const data = await response.json();
+          
+          if (Array.isArray(data?.headlines) && data.headlines.length > 0) {
+            setHeadlines(data.headlines);
+            retryCount = 0; // Reset retry count on success
+          } else if (retryCount < maxRetries) {
+            // If no headlines, retry more aggressively
+            retryCount += 1;
+            console.log("No headlines found, retrying...", retryCount);
+            setTimeout(loadHeadlines, 2000);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to load headlines:", err);
+          if (retryCount < maxRetries) {
+            retryCount += 1;
+            setTimeout(loadHeadlines, 2000);
+          }
+        }
+      }
     };
     
     // Load immediately
     loadHeadlines();
     
-    // Refresh headlines every 15 seconds for up-to-date breaking news
-    const interval = setInterval(loadHeadlines, 15000);
+    // Refresh headlines every 10 seconds for up-to-date breaking news
+    const interval = setInterval(loadHeadlines, 10000);
 
     return () => {
       cancelled = true;

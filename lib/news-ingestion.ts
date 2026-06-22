@@ -565,7 +565,7 @@ export async function fetchLatestNewsItems(limit = MAX_IMPORTS_PER_RUN) {
   const items = fetchedSources
     .flat()
     .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
-    .filter((item) => item.imageUrl && isValidImageUrl(item.imageUrl) && hasFullArticleContext(item))
+    .filter((item) => hasFullArticleContext(item) || (item.summary && item.summary.length > 100))
     .filter((item) => {
       const key = `${normalizeTitle(item.title)}:${item.publishedAt.toISOString().slice(0, 10)}`;
       if (seen.has(key)) return false;
