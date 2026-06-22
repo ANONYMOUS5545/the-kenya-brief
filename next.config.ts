@@ -20,9 +20,7 @@ const nextConfig: NextConfig = {
     },
   },
   compress: true,
-  swcMinify: true,
   productionBrowserSourceMaps: false,
-  optimizeFonts: true,
 };
 
 export default nextConfig;
