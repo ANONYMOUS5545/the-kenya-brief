@@ -675,7 +675,7 @@ export async function runNewsIngestion() {
           sourcePublishedAt: item.publishedAt,
           status: "PUBLISHED",
           isAutomated: true,
-          isBreaking: category.name === "Breaking News",
+          isBreaking: category.name === "Breaking News" || imported < 6,
           isTrending: trendScore > 0,
           isFeatured: imported < 3,
           readTime: estimateReadTime(content),

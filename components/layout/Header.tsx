@@ -43,22 +43,31 @@ export default function Header() {
   useEffect(() => {
     let cancelled = false;
     const loadHeadlines = () => {
-      fetch("/api/news/headlines", { cache: "no-store" })
+      fetch(`/api/news/headlines?t=${Date.now()}`, { 
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      })
         .then((response) => response.json())
         .then((data) => {
-          if (!cancelled && Array.isArray(data?.headlines)) setHeadlines(data.headlines);
+          if (!cancelled && Array.isArray(data?.headlines) && data.headlines.length > 0) {
+            setHeadlines(data.headlines);
+          }
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error("Failed to load headlines:", err);
+        });
     };
     
-    const timeout = window.setTimeout(loadHeadlines, 1500);
+    // Load immediately
+    loadHeadlines();
     
-    // Refresh headlines every 30 seconds for up-to-date breaking news
-    const interval = setInterval(loadHeadlines, 30000);
+    // Refresh headlines every 15 seconds for up-to-date breaking news
+    const interval = setInterval(loadHeadlines, 15000);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeout);
       clearInterval(interval);
     };
   }, []);
