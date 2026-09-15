@@ -68,16 +68,13 @@ async function queryHomeData() {
 
 async function getHomeData() {
   try {
-    const liveData = await getLiveFallbackHomeData().catch(() => null);
-    if (liveData?.latestByCategory.length) return liveData;
-
     const data = await queryHomeData();
 
-    if (!data.latestByCategory.length || !data.categories.length) {
-      return await getLiveFallbackHomeData().catch(() => getFallbackHomeData());
+    if (data.latestByCategory.length && data.categories.length) {
+      return data;
     }
 
-    return data;
+    return await getLiveFallbackHomeData().catch(() => getFallbackHomeData());
   } catch (error) {
     console.error("Homepage data unavailable, rendering fallback content:", error);
     return await getLiveFallbackHomeData().catch(() => getFallbackHomeData());

@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { slugify, estimateReadTime, generateMetaDescription } from "@/lib/utils";
+import { slugify, estimateReadTime, generateMetaDescription, parsePositiveInt, sanitizeRichHtml } from "@/lib/utils";
 import type { ArticleStatus } from "@/types";
+
+const ARTICLE_STATUSES = new Set<ArticleStatus>(["DRAFT", "PENDING_REVIEW", "APPROVED", "PUBLISHED", "REJECTED", "ARCHIVED"]);
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = parsePositiveInt(searchParams.get("page"), 1, 10000);
+    const limit = parsePositiveInt(searchParams.get("limit"), 10, 50);
     const category = searchParams.get("category");
-    const status = searchParams.get("status") as ArticleStatus | null;
+    const rawStatus = searchParams.get("status") as ArticleStatus | null;
+    const status = rawStatus && ARTICLE_STATUSES.has(rawStatus) ? rawStatus : null;
     const featured = searchParams.get("featured") === "true";
     const trending = searchParams.get("trending") === "true";
     const breaking = searchParams.get("breaking") === "true";
@@ -94,8 +97,13 @@ export async function POST(request: NextRequest) {
     }
 
     const slug = slugify(title);
-    const readTime = estimateReadTime(content);
-    const autoExcerpt = excerpt || generateMetaDescription(content);
+    const safeContent = sanitizeRichHtml(content);
+    if (!safeContent) {
+      return NextResponse.json({ success: false, error: "Article content is invalid" }, { status: 400 });
+    }
+
+    const readTime = estimateReadTime(safeContent);
+    const autoExcerpt = excerpt || generateMetaDescription(safeContent);
 
     let articleStatus = "DRAFT";
     if (status === "PENDING_REVIEW") articleStatus = "PENDING_REVIEW";
@@ -109,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const article = await prisma.article.create({
       data: {
-        title, slug: finalSlug, excerpt: autoExcerpt, content,
+        title, slug: finalSlug, excerpt: autoExcerpt, content: safeContent,
         featuredImage, featuredImageAlt, videoUrl,
         status: articleStatus,
         isFeatured: isFeatured || false,

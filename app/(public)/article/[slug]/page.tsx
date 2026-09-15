@@ -16,7 +16,7 @@ import type { ArticleWithRelations } from "@/types";
 import Link from "next/link";
 import Image from "next/image";
 import { Clock, Eye, Calendar, Tag, ChevronRight } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, sanitizeRichHtml } from "@/lib/utils";
 import { PUBLIC_NEWS_AUTHOR_NAME } from "@/lib/news-automation";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -38,14 +38,12 @@ const getArticle = cache(async (slug: string) => {
     if (article) return article;
     const liveArticle = await getLiveFallbackArticle(slug).catch(() => null);
     if (liveArticle) return liveArticle;
-    const live = await getLiveFallbackHomeData().catch(() => null);
-    return live?.latestByCategory[0] || fallbackArticles.find((item) => item.slug === slug) || null;
+    return fallbackArticles.find((item) => item.slug === slug) || null;
   } catch (error) {
     console.error("Article data unavailable, rendering fallback article:", error);
     const liveArticle = await getLiveFallbackArticle(slug).catch(() => null);
     if (liveArticle) return liveArticle;
-    const live = await getLiveFallbackHomeData().catch(() => null);
-    return live?.latestByCategory[0] || fallbackArticles.find((item) => item.slug === slug) || null;
+    return fallbackArticles.find((item) => item.slug === slug) || null;
   }
 });
 
@@ -144,6 +142,7 @@ export default async function ArticlePage({ params }: Props) {
   const vocalizeText = [article.title, article.excerpt, getPlainText(article.content)]
     .filter(Boolean)
     .join(". ");
+  const safeArticleContent = sanitizeRichHtml(article.content);
 
   if (!article.id.startsWith("live-") && !article.id.startsWith("fallback-")) {
     prisma.article.update({ where: { id: article.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
@@ -247,7 +246,7 @@ export default async function ArticlePage({ params }: Props) {
                     </div>
                     {(article.imageCaption || article.imageCredit) && (
                       <p className="px-6 py-2 text-xs text-gray-500 font-sans bg-gray-50 border-b border-gray-100">
-                        {article.imageCaption}
+                        {[article.imageCaption, article.imageCredit ? `Credit: ${article.imageCredit}` : null].filter(Boolean).join(" | ")}
                       </p>
                     )}
                   </div>
@@ -268,7 +267,7 @@ export default async function ArticlePage({ params }: Props) {
 
                   <div
                     className="article-body text-gray-800 text-base leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: article.content }}
+                    dangerouslySetInnerHTML={{ __html: safeArticleContent }}
                   />
 
                   {/* Tags */}

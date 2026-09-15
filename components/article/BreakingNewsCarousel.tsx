@@ -44,7 +44,7 @@ export default function BreakingNewsCarousel({ slides, autoPlayInterval = 5000 }
   const prevSlide = () => goToSlide(currentSlide - 1);
 
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlaying || slideCount === 0) return;
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slideCount);
@@ -52,6 +52,8 @@ export default function BreakingNewsCarousel({ slides, autoPlayInterval = 5000 }
 
     return () => clearInterval(timer);
   }, [isAutoPlaying, slideCount, autoPlayInterval]);
+
+  if (slideCount === 0) return null;
 
   return (
     <div ref={containerRef} className="relative w-full bg-gradient-to-br from-red-700 to-red-800 rounded-lg overflow-hidden shadow-lg">

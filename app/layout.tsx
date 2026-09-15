@@ -4,7 +4,6 @@ import { Providers } from "@/components/Providers";
 import { Toaster } from "react-hot-toast";
 import { getSiteUrl } from "@/lib/site-url";
 import AnalyticsScripts from "@/components/AnalyticsScripts";
-import NewsInitializer from "@/components/NewsInitializer";
 
 const siteUrl = getSiteUrl();
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
@@ -78,7 +77,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>
-          <NewsInitializer />
           <AnalyticsScripts gaId={gaId} />
           {children}
           <Toaster

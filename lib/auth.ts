@@ -43,6 +43,17 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.id = user.id;
+      } else if (token.id) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, isActive: true, isSuspended: true },
+        });
+        if (!currentUser || !currentUser.isActive || currentUser.isSuspended) {
+          token.role = "READER";
+          token.id = undefined;
+        } else {
+          token.role = currentUser.role;
+        }
       }
       return token;
     },

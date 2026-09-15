@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parsePositiveInt } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const articleId = searchParams.get("articleId");
     const status = searchParams.get("status");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const page = parsePositiveInt(searchParams.get("page"), 1, 10000);
+    const limit = parsePositiveInt(searchParams.get("limit"), 20, 100);
     const skip = (page - 1) * limit;
 
     const session = await getServerSession(authOptions);
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: comments, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (error) {
-    return NextResponse.json({ success: true, data: [], total: 0, page: 1, limit: 20, totalPages: 0 });
+    console.error("GET /api/comments error:", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch comments" }, { status: 500 });
   }
 }
 
@@ -49,7 +51,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { articleId, content, guestName, guestEmail, parentId } = body;
 
-    if (!articleId || !content) {
+    const cleanContent = typeof content === "string" ? content.trim() : "";
+    if (!articleId || !cleanContent) {
       return NextResponse.json({ success: false, error: "Article ID and content are required" }, { status: 400 });
     }
     if (!session?.user && (!guestName || !guestEmail)) {
@@ -63,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const comment = await prisma.comment.create({
       data: {
-        content,
+        content: cleanContent.slice(0, 2000),
         articleId,
         parentId: parentId || null,
         userId: session?.user ? (session.user as any).id : null,

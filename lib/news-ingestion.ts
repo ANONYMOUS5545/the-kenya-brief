@@ -247,7 +247,7 @@ function parseFeed(xml: string, sourceName: string): FeedItem[] {
         sourceName,
       };
     })
-    .filter((item) => hasUsableNewsText(item.title, 6) && item.link && item.imageUrl)
+    .filter((item) => hasUsableNewsText(item.title, 6) && item.link)
     .filter((item) => {
       // Filter out NTV podcasts and sports promo content
       if (sourceName.toLowerCase().includes("ntv")) {
@@ -467,7 +467,7 @@ async function repairExistingAutomatedArticles() {
 
   for (const article of articles) {
     const repairedContent = sanitizeExistingArticleHtml(article.content);
-    const hasReferencedImage = Boolean(article.featuredImage && article.featuredImage !== FALLBACK_IMAGE);
+    const hasReferencedImage = Boolean(article.featuredImage);
     const hasCleanTitle = hasUsableNewsText(article.title, 8) && !hasCorruptNewsText(article.title);
     const hasCleanExcerpt = !article.excerpt || (hasUsableNewsText(article.excerpt, 30) && !hasCorruptNewsText(article.excerpt));
 

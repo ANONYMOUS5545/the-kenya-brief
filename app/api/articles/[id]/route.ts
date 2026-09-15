@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { slugify, estimateReadTime } from "@/lib/utils";
+import { slugify, estimateReadTime, sanitizeRichHtml } from "@/lib/utils";
+
+const ARTICLE_STATUSES = new Set(["DRAFT", "PENDING_REVIEW", "APPROVED", "PUBLISHED", "REJECTED", "ARCHIVED"]);
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -77,15 +79,32 @@ export async function PUT(request: NextRequest, { params }: Params) {
       metaTitle, metaDescription, status, rejectionReason,
     } = body;
 
-    let statusUpdate: string | undefined = status;
+    let statusUpdate: string | undefined = ARTICLE_STATUSES.has(status) ? status : undefined;
     if (status === "PUBLISHED" && !["ADMIN", "SENIOR_EDITOR"].includes(user.role)) {
       statusUpdate = undefined;
     }
 
     const updateData: Record<string, unknown> = {};
-    if (title !== undefined) { updateData.title = title; updateData.slug = slugify(title); }
+    if (title !== undefined) {
+      updateData.title = title;
+      const nextSlug = slugify(title);
+      if (nextSlug && nextSlug !== article.slug) {
+        const existingSlug = await prisma.article.findFirst({
+          where: { slug: nextSlug, id: { not: id } },
+          select: { id: true },
+        });
+        updateData.slug = existingSlug ? `${nextSlug}-${Date.now()}` : nextSlug;
+      }
+    }
     if (excerpt !== undefined) updateData.excerpt = excerpt;
-    if (content !== undefined) { updateData.content = content; updateData.readTime = estimateReadTime(content); }
+    if (content !== undefined) {
+      const safeContent = sanitizeRichHtml(content);
+      if (!safeContent) {
+        return NextResponse.json({ success: false, error: "Article content is invalid" }, { status: 400 });
+      }
+      updateData.content = safeContent;
+      updateData.readTime = estimateReadTime(safeContent);
+    }
     if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
     if (featuredImageAlt !== undefined) updateData.featuredImageAlt = featuredImageAlt;
     if (videoUrl !== undefined) updateData.videoUrl = videoUrl;

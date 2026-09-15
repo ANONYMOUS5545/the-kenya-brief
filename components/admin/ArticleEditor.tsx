@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Save, Send, Upload, X, Image as ImageIcon, Video, Tag as TagIcon, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -235,7 +236,9 @@ export default function ArticleEditor({ categories, tags, article, userRole, red
             </label>
             {form.featuredImage ? (
               <div className="relative">
-                <img src={form.featuredImage} alt="Featured" className="w-full aspect-video object-cover rounded-lg" />
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                  <Image src={form.featuredImage} alt="Featured" fill className="object-cover" />
+                </div>
                 <button onClick={() => setForm((f) => ({ ...f, featuredImage: "" }))}
                   className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700">
                   <X size={12} />

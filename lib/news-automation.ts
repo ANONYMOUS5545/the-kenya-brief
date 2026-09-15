@@ -185,10 +185,10 @@ export function sanitizeArticleParagraphs(text?: string | null) {
 }
 
 export function hasFullArticleContext(item: Pick<FetchedNewsItem, "bodyText" | "summary" | "imageUrl">) {
-  if (!item.imageUrl) return false;
   const paragraphs = sanitizeArticleParagraphs(item.bodyText);
   const charCount = paragraphs.join(" ").length;
-  return paragraphs.length >= MIN_FULL_CONTEXT_PARAGRAPHS && charCount >= MIN_FULL_CONTEXT_CHARS;
+  if (paragraphs.length >= MIN_FULL_CONTEXT_PARAGRAPHS && charCount >= MIN_FULL_CONTEXT_CHARS) return true;
+  return hasUsableNewsText(item.summary, 120);
 }
 
 export function sanitizeExistingArticleHtml(html: string) {
@@ -259,7 +259,14 @@ export function createKenyaBriefArticleContent(item: Pick<FetchedNewsItem, "titl
   const bodyTextLength = bodyParagraphs.join(" ").length;
 
   if (bodyParagraphs.length < MIN_FULL_CONTEXT_PARAGRAPHS || bodyTextLength < MIN_FULL_CONTEXT_CHARS) {
-    return null;
+    if (!hasUsableNewsText(summary, 80)) return null;
+    const source = item.sourceName || "a verified publisher";
+    const title = createKenyaBriefTitle(item);
+    return [
+      `<p>${escapeHtml(summary)}</p>`,
+      `<p>${escapeHtml(`The Kenya Brief is tracking this developing story from ${source}. Editors will update this report as more confirmed details become available.`)}</p>`,
+      `<p>${escapeHtml(`The update is relevant to readers following ${title.toLowerCase()} and related developments across Kenya and the wider region.`)}</p>`,
+    ].join("");
   }
 
   const paragraphs = summary ? [summary, ...bodyParagraphs] : bodyParagraphs;

@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },
-      { protocol: "http", hostname: "**" },
     ],
     // Optimize image loading and formats
     formats: ["image/avif", "image/webp"],

@@ -13,8 +13,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
+  const hasValidCronSecret = Boolean(cronSecret && authHeader === `Bearer ${cronSecret}`);
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!hasValidCronSecret) {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as { role?: string }).role !== "ADMIN") {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });

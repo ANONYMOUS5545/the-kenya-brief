@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import Image from "next/image";
 import { Clock, Eye, MessageCircle } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
@@ -231,3 +231,4 @@ export default function ArticleCard({
     </article>
   );
 }
+
